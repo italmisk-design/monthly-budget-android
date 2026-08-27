@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>الميزانية الشهرية</title>
+<style>
+:root{--bg:#f5f7fa;--card:#fff;--line:#dfe5ec;--p:#1565c0;--danger:#c62828;--text:#182230;--muted:#687385}
+*{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,sans-serif;direction:rtl;text-align:right}button,input{font:inherit}.app{max-width:1400px;margin:auto;padding:12px}.header{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px}.header h1{font-size:22px;margin:0}.sub{font-size:13px;color:var(--muted)}.toolbar{display:flex;gap:8px;flex-wrap:wrap}.btn{border:0;border-radius:10px;padding:10px 14px;min-height:42px;background:#e8eef6}.btn.primary{background:var(--p);color:#fff}.grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.08fr);grid-template-areas:"result input";gap:14px;direction:ltr;align-items:start}.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:13px;direction:rtl}.input{grid-area:input}.result{grid-area:result}.meta{display:grid;grid-template-columns:1fr 1fr;gap:10px}.field label{display:block;color:var(--muted);font-size:13px;margin-bottom:5px}.field input{width:100%;min-height:44px;border:1px solid var(--line);border-radius:10px;padding:10px;text-align:right}.field input.num{direction:ltr;text-align:left}.sec{margin-top:14px}.sec-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px}.sec-head h3{margin:0;font-size:16px}.add{border:1px solid #b8c9dc;background:#eef5fc;color:#0d4f93;border-radius:9px;padding:8px 10px}.rows{border:1px solid var(--line);border-radius:12px;padding:7px;max-height:315px;overflow-y:auto;background:#fbfcfe}.row{display:grid;grid-template-columns:38px minmax(115px,1fr) 70px minmax(100px,140px);gap:8px;align-items:center;padding:10px 3px;border-bottom:1px solid #edf0f4;direction:rtl}.row:last-child{border-bottom:0}.del{width:34px;height:34px;border:0;border-radius:50%;font-size:20px;font-weight:bold;background:#ffebee;color:var(--danger)}.name,.money{width:100%;min-height:40px;border:1px solid var(--line);border-radius:9px;padding:8px;background:#fff}.name{direction:rtl;text-align:right}.money{direction:ltr;text-align:left}.cur{border:0;border-radius:9px;min-height:40px;background:#e3f2fd;color:#0d47a1;font-weight:bold;direction:ltr}.cur.usd{background:#e8f5e9;color:#1b5e20}.preview{white-space:pre-wrap;line-height:1.85;font-size:14px;background:#fbfcfe;border:1px solid var(--line);border-radius:12px;padding:13px;min-height:650px;max-height:calc(100vh - 100px);overflow:auto;direction:rtl;text-align:right}
+@media(max-width:800px){.header{align-items:flex-start;flex-direction:column}.toolbar{width:100%}.toolbar .btn{flex:1;padding:9px 6px}.grid{display:flex;flex-direction:column;direction:rtl}.input{order:1;width:100%}.result{order:2;width:100%}.meta{grid-template-columns:1fr}.preview{min-height:420px;max-height:none}.row{grid-template-columns:36px minmax(90px,1fr) 62px minmax(84px,110px);gap:5px}.rows{max-height:360px}.card{padding:10px}}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <div><h1>الميزانية الشهرية</h1><div class="sub">الحساب الأساسي بالدينار العراقي</div></div>
+    <div class="toolbar"><button class="btn" onclick="newBudget()">شهر جديد</button><button class="btn" onclick="openBudget()">فتح ملف</button><button class="btn primary" onclick="saveBudget()">حفظ</button></div>
+  </div>
+  <div class="grid">
+    <section class="card input">
+      <div class="meta">
+        <div class="field"><label>الشهر</label><input id="month" type="month"></div>
+        <div class="field"><label>سعر صرف 1 دولار بالدينار</label><input id="rate" class="num" inputmode="numeric" value="1,300"></div>
+      </div>
+      <div class="sec"><div class="sec-head"><h3>الدخل</h3><button class="add" onclick="addItem('income')">+ إضافة دخل</button></div><div id="incomeRows" class="rows"></div></div>
+      <div class="sec"><div class="sec-head"><h3>المدخرات</h3><button class="add" onclick="addItem('savings')">+ إضافة مدخرات</button></div><div id="savingsRows" class="rows"></div></div>
+      <div class="sec"><div class="sec-head"><h3>المصاريف</h3><button class="add" onclick="addItem('expenses')">+ إضافة مصروف</button></div><div id="expensesRows" class="rows"></div></div>
+    </section>
+    <section class="card result"><h2 style="margin:0 0 10px;font-size:17px">التفاصيل الشاملة</h2><div id="preview" class="preview"></div></section>
+  </div>
+</div>
+<script>
+const DEF_EXP=["القسط","الخدمات","الانترنت","الكهرباء","الكي كارد","المعيشة","مصروف شاكر","مصروف بسمة","مصروف عائلة بسمة","هدايا","بانزين السيارة","صيانة السيارة"];
+let state;
+function defaults(){const d=new Date(),m=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");return{month:m,rate:1300,income:[{name:"الراتب / الدخل بالدولار",currency:"USD",amount:0},{name:"الراتب / الدخل بالدينار",currency:"IQD",amount:0}],savings:[{name:"المدخرات بالدولار",currency:"USD",amount:0},{name:"المدخرات بالدينار",currency:"IQD",amount:0}],expenses:DEF_EXP.map(name=>({name,currency:"IQD",amount:0}))}}
+function digits(s){const a="٠١٢٣٤٥٦٧٨٩",f="۰۱۲۳۴۵۶۷۸۹";return String(s??"").replace(/[٠-٩]/g,c=>a.indexOf(c)).replace(/[۰-۹]/g,c=>f.indexOf(c))}
+function num(s){const n=Number(digits(s).replace(/[\s,٬]/g,"").replace(/٫/g,"."));return Number.isFinite(n)?n:0}
+function commas(n){return Math.round(Number(n)||0).toLocaleString("en-US")}
+function iqd(n){return commas(n)+" د.ع"}function usd(n){return "$"+(Number(n)||0).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2})}
+function fmtLive(el){const raw=digits(el.value).replace(/[^0-9]/g,"");el.value=raw?Number(raw).toLocaleString("en-US"):""}
+function esc(s){return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
+function row(kind,e,i){return `<div class="row"><button class="del" tabindex="-1" onclick="removeItem('${kind}',${i})">×</button><input class="name" value="${esc(e.name)}" onblur="update()"><button class="cur ${e.currency==='USD'?'usd':''}" tabindex="-1" onclick="toggle('${kind}',${i})">${e.currency}</button><input class="money" inputmode="numeric" value="${e.amount?commas(e.amount):''}" oninput="fmtLive(this)" onblur="update()"></div>`}
+function render(){for(const k of ["income","savings","expenses"])document.getElementById(k+"Rows").innerHTML=state[k].map((e,i)=>row(k,e,i)).join("");document.getElementById("month").value=state.month;document.getElementById("rate").value=commas(state.rate);update()}
+function collect(){state.month=document.getElementById("month").value||"";state.rate=num(document.getElementById("rate").value)||1300;for(const k of ["income","savings","expenses"]){const rows=[...document.getElementById(k+"Rows").querySelectorAll(".row")];rows.forEach((r,i)=>{if(state[k][i]){state[k][i].name=r.querySelector(".name").value.trim()||state[k][i].name;state[k][i].amount=num(r.querySelector(".money").value)}})}}
+function totals(){collect();const r=state.rate;let iu=0,ii=0,su=0,si=0,ex=0;state.income.forEach(e=>e.currency==='USD'?iu+=e.amount:ii+=e.amount);state.savings.forEach(e=>e.currency==='USD'?su+=e.amount:si+=e.amount);state.expenses.forEach(e=>ex+=e.currency==='USD'?e.amount*r:e.amount);const inc=ii+iu*r,sav=si+su*r,av=inc+sav,rem=av-ex;return{r,iu,ii,su,si,ex,inc,sav,av,rem,remu:rem/r}}
+function line(e,r){return e.currency==='USD'?`${e.name}: ${usd(e.amount)} (= ${iqd(e.amount*r)})`:`${e.name}: ${iqd(e.amount)}`}
+function text(){const c=totals(),L=[];L.push("الميزانية الشهرية","========================================","الشهر: "+(state.month||"-"),"سعر الصرف: 1 دولار = "+iqd(c.r),"");L.push("الدخل الشهري","----------------------------------------");state.income.forEach(e=>L.push(line(e,c.r)));L.push("إجمالي الدخل بعد التحويل: "+iqd(c.inc),"");L.push("المدخرات المضافة إلى الدخل","----------------------------------------");state.savings.forEach(e=>L.push(line(e,c.r)));L.push("إجمالي المدخرات بعد التحويل: "+iqd(c.sav),"");L.push("المبلغ المتاح الكلي: "+iqd(c.av),"");L.push("تفاصيل المصاريف","----------------------------------------");state.expenses.forEach(e=>L.push(line(e,c.r)));L.push("","إجمالي المصاريف: "+iqd(c.ex),"","النتيجة النهائية","========================================","المتبقي بالدينار: "+iqd(c.rem),"المتبقي بما يعادله بالدولار: "+usd(c.remu));return L.join("\n")}
+function update(){document.getElementById("preview").textContent=text();try{localStorage.setItem("budget_state",JSON.stringify(state))}catch(e){}}
+function addItem(kind){collect();const label=kind==='income'?'دخل':kind==='savings'?'مدخرات':'مصروف',name=prompt("اكتب اسم "+label+":","");if(!name||!name.trim())return;state[kind].push({name:name.trim(),currency:"IQD",amount:0});render();setTimeout(()=>{const x=document.getElementById(kind+"Rows");x.scrollTop=x.scrollHeight},30)}
+function removeItem(kind,i){collect();if(!state[kind][i])return;if(!confirm("هل تريد حذف البند:\n"+state[kind][i].name+" ؟"))return;state[kind].splice(i,1);render()}
+function toggle(kind,i){collect();if(!state[kind][i])return;state[kind][i].currency=state[kind][i].currency==='USD'?'IQD':'USD';render()}
+function payload(){collect();return JSON.stringify({"نوع_الملف":"ميزانية_شهرية","النسخة":12,"الشهر":state.month,"سعر_الصرف":state.rate,"بنود_الدخل":state.income.map(e=>({"الاسم":e.name,"العملة":e.currency,"المبلغ":e.amount})),"بنود_المدخرات":state.savings.map(e=>({"الاسم":e.name,"العملة":e.currency,"المبلغ":e.amount})),"المصاريف":state.expenses.map(e=>({"الاسم":e.name,"العملة":e.currency,"المبلغ":e.amount}))},null,2)}
+function saveBudget(){const full=text();if(!confirm(full+"\n\nهل تريد حفظ هذه الميزانية؟"))return;const name="ميزانية "+(state.month||"شهرية")+".txt";if(window.AndroidBudget&&AndroidBudget.saveBudget)AndroidBudget.saveBudget(name,payload())}
+function openBudget(){if(window.AndroidBudget&&AndroidBudget.openBudget)AndroidBudget.openBudget()}
+window.loadBudgetFromAndroid=function(raw){try{const d=JSON.parse(raw),s=defaults();s.month=String(d["الشهر"]||s.month);s.rate=Number(d["سعر_الصرف"]||1300);if(Array.isArray(d["بنود_الدخل"]))s.income=d["بنود_الدخل"].map(x=>({name:String(x["الاسم"]||"دخل"),currency:x["العملة"]==='USD'?'USD':'IQD',amount:Number(x["المبلغ"]||0)}));else if(d["الدخل"])s.income=[{name:"الراتب / الدخل بالدولار",currency:"USD",amount:Number(d["الدخل"]["دولار"]||0)},{name:"الراتب / الدخل بالدينار",currency:"IQD",amount:Number(d["الدخل"]["دينار"]||0)}];if(Array.isArray(d["بنود_المدخرات"]))s.savings=d["بنود_المدخرات"].map(x=>({name:String(x["الاسم"]||"مدخرات"),currency:x["العملة"]==='USD'?'USD':'IQD',amount:Number(x["المبلغ"]||0)}));else if(d["المدخرات"])s.savings=[{name:"المدخرات بالدولار",currency:"USD",amount:Number(d["المدخرات"]["دولار"]||0)},{name:"المدخرات بالدينار",currency:"IQD",amount:Number(d["المدخرات"]["دينار"]||0)}];if(Array.isArray(d["المصاريف"]))s.expenses=d["المصاريف"].map(x=>({name:String(x["الاسم"]||"مصروف"),currency:x["العملة"]==='USD'?'USD':'IQD',amount:Number(x["المبلغ"]||0)}));state=s;render();if(window.AndroidBudget&&AndroidBudget.toast)AndroidBudget.toast("تم فتح الميزانية")}catch(e){alert("تعذر فتح الملف:\n"+e.message)}}
+function newBudget(){if(!confirm("هل تريد مسح الميزانية الحالية وبدء شهر جديد؟"))return;state=defaults();render()}
+document.addEventListener("DOMContentLoaded",()=>{try{state=JSON.parse(localStorage.getItem("budget_state"))}catch(e){}if(!state||!Array.isArray(state.income)||!Array.isArray(state.savings)||!Array.isArray(state.expenses))state=defaults();document.getElementById("rate").addEventListener("input",e=>fmtLive(e.target));document.getElementById("rate").addEventListener("blur",update);document.getElementById("month").addEventListener("change",update);render()});
+</script>
+</body>
+</html>
