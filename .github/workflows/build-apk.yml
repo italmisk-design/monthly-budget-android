@@ -1,4 +1,4 @@
-name: Build Android APK
+name: Build Tofeeri APK
 
 on:
   workflow_dispatch:
@@ -33,11 +33,11 @@ jobs:
         run: gradle assembleDebug --stacktrace
 
       - name: Rename APK
-        run: cp app/build/outputs/apk/debug/app-debug.apk MonthlyBudget.apk
+        run: cp app/build/outputs/apk/debug/app-debug.apk Tofeeri.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: MonthlyBudget-APK
-          path: MonthlyBudget.apk
+          name: Tofeeri-APK
+          path: Tofeeri.apk
           if-no-files-found: error
