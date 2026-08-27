@@ -12,6 +12,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Apply monthly confirmation patch
+        run: python tools/patch_monthly_confirm.py
+
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
