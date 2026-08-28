@@ -4,6 +4,9 @@ import android.app.Activity;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
+import android.graphics.Color;
+import android.view.View;
+import android.view.WindowInsets;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
@@ -28,9 +31,19 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        getWindow().getDecorView().setLayoutDirection(android.view.View.LAYOUT_DIRECTION_RTL);
+        getWindow().getDecorView().setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
+        getWindow().setStatusBarColor(Color.rgb(243, 246, 245));
+        getWindow().setNavigationBarColor(Color.WHITE);
+        getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR);
+
         webView = new WebView(this);
-        webView.setLayoutDirection(android.view.View.LAYOUT_DIRECTION_RTL);
+        webView.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
+        webView.setFitsSystemWindows(true);
+        webView.setOnApplyWindowInsetsListener((v, insets) -> {
+            int top = insets.getSystemWindowInsetTop();
+            v.setPadding(v.getPaddingLeft(), top, v.getPaddingRight(), v.getPaddingBottom());
+            return insets;
+        });
         setContentView(webView);
 
         WebSettings settings = webView.getSettings();
@@ -72,7 +85,7 @@ public class MainActivity extends Activity {
                 intent.addCategory(Intent.CATEGORY_OPENABLE);
                 intent.setType("application/json");
                 intent.putExtra(Intent.EXTRA_TITLE,
-                        (defaultFileName == null || defaultFileName.trim().isEmpty()) ? "Masroofi-Backup.json" : defaultFileName);
+                        (defaultFileName == null || defaultFileName.trim().isEmpty()) ? "Wafferli-Backup.json" : defaultFileName);
                 startActivityForResult(intent, REQ_SAVE);
             });
         }
