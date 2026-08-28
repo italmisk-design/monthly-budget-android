@@ -36,6 +36,9 @@ jobs:
       - name: Apply Wafferli brand name
         run: python tools/patch_brand_name.py
 
+      - name: Apply full-screen safe area
+        run: python tools/patch_safe_area.py
+
       - name: Validate patched JavaScript
         shell: bash
         run: |
