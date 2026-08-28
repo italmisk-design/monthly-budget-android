@@ -21,6 +21,9 @@ jobs:
       - name: Apply monthly transfer patch
         run: python tools/patch_monthly_transfer.py
 
+      - name: Improve category manager
+        run: python tools/patch_category_manager.py
+
       - name: Validate patched JavaScript
         shell: bash
         run: |
