@@ -1,4 +1,4 @@
-name: Build Tofeeri APK
+name: Build Wafferli APK
 
 on:
   workflow_dispatch:
@@ -27,8 +27,11 @@ jobs:
       - name: Add transaction filters
         run: python tools/patch_transaction_filters.py
 
-      - name: Apply Tofeeri logo
+      - name: Apply Wafferli logo
         run: python tools/patch_logo.py
+
+      - name: Apply Wafferli brand name
+        run: python tools/patch_brand_name.py
 
       - name: Validate patched JavaScript
         shell: bash
@@ -40,25 +43,25 @@ jobs:
           m = re.search(r'<script>(.*)</script>', s, re.S)
           if not m:
               raise SystemExit('Inline script not found')
-          Path('/tmp/tofeeri-app.js').write_text(m.group(1), encoding='utf-8')
+          Path('/tmp/wafferli-app.js').write_text(m.group(1), encoding='utf-8')
           PY
-          node --check /tmp/tofeeri-app.js
+          node --check /tmp/wafferli-app.js
 
       - name: Create matching Android source ZIP
         run: |
-          zip -qr Tofeeri-Android-Source.zip . \
+          zip -qr Wafferli-Android-Source.zip . \
             -x '.git/*' \
             -x 'ios/*' \
             -x '.github/workflows/build-ios.yml' \
             -x 'app/build/*' \
-            -x 'Tofeeri.apk' \
-            -x 'Tofeeri-Android-Source.zip'
+            -x 'Wafferli-Android.apk' \
+            -x 'Wafferli-Android-Source.zip'
 
       - name: Upload Android source ZIP
         uses: actions/upload-artifact@v4
         with:
-          name: Tofeeri-Android-Source
-          path: Tofeeri-Android-Source.zip
+          name: Wafferli-Android-Source
+          path: Wafferli-Android-Source.zip
           if-no-files-found: error
 
       - name: Set up JDK 17
@@ -82,11 +85,11 @@ jobs:
         run: gradle assembleDebug --stacktrace
 
       - name: Rename APK
-        run: cp app/build/outputs/apk/debug/app-debug.apk Tofeeri-Android.apk
+        run: cp app/build/outputs/apk/debug/app-debug.apk Wafferli-Android.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: Tofeeri-Android-APK
-          path: Tofeeri-Android.apk
+          name: Wafferli-Android-APK
+          path: Wafferli-Android.apk
           if-no-files-found: error
