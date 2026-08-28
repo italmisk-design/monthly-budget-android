@@ -29,14 +29,22 @@ public class MainActivity extends Activity {
     private static final int REQ_OPEN = 1002;
     private WebView webView;
     private String pendingSaveContent = "";
+    private int safeTop = 0;
+    private int safeBottom = 0;
+    private int safeLeft = 0;
+    private int safeRight = 0;
+    private boolean pageLoaded = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
         getWindow().getDecorView().setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
-        getWindow().setStatusBarColor(Color.rgb(243, 246, 245));
-        getWindow().setNavigationBarColor(Color.WHITE);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            getWindow().setDecorFitsSystemWindows(false);
+        }
+        getWindow().setStatusBarColor(Color.TRANSPARENT);
+        getWindow().setNavigationBarColor(Color.TRANSPARENT);
         getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR);
 
         final FrameLayout root = new FrameLayout(this);
@@ -45,34 +53,32 @@ public class MainActivity extends Activity {
 
         webView = new WebView(this);
         webView.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
-        webView.setBackgroundColor(Color.rgb(243, 246, 245));
-
-        FrameLayout.LayoutParams webParams = new FrameLayout.LayoutParams(
+        webView.setBackgroundColor(Color.TRANSPARENT);
+        root.addView(webView, new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.MATCH_PARENT
-        );
-        root.addView(webView, webParams);
+        ));
         setContentView(root);
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            getWindow().setDecorFitsSystemWindows(false);
-            root.setOnApplyWindowInsetsListener((v, insets) -> {
+        root.setOnApplyWindowInsetsListener((v, insets) -> {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 android.graphics.Insets bars = insets.getInsets(
                         WindowInsets.Type.systemBars() | WindowInsets.Type.displayCutout()
                 );
-                FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) webView.getLayoutParams();
-                if (lp.topMargin != bars.top || lp.bottomMargin != bars.bottom ||
-                        lp.leftMargin != bars.left || lp.rightMargin != bars.right) {
-                    lp.topMargin = bars.top;
-                    lp.bottomMargin = bars.bottom;
-                    lp.leftMargin = bars.left;
-                    lp.rightMargin = bars.right;
-                    webView.setLayoutParams(lp);
-                }
-                return insets;
-            });
-            root.requestApplyInsets();
-        }
+                safeTop = bars.top;
+                safeBottom = bars.bottom;
+                safeLeft = bars.left;
+                safeRight = bars.right;
+            } else {
+                safeTop = insets.getSystemWindowInsetTop();
+                safeBottom = insets.getSystemWindowInsetBottom();
+                safeLeft = insets.getSystemWindowInsetLeft();
+                safeRight = insets.getSystemWindowInsetRight();
+            }
+            applySafeAreaToWeb();
+            return insets;
+        });
+        root.requestApplyInsets();
 
         WebSettings settings = webView.getSettings();
         settings.setJavaScriptEnabled(true);
@@ -83,7 +89,14 @@ public class MainActivity extends Activity {
         settings.setDisplayZoomControls(false);
         settings.setTextZoom(100);
 
-        webView.setWebViewClient(new WebViewClient());
+        webView.setWebViewClient(new WebViewClient() {
+            @Override
+            public void onPageFinished(WebView view, String url) {
+                super.onPageFinished(view, url);
+                pageLoaded = true;
+                applySafeAreaToWeb();
+            }
+        });
         webView.setWebChromeClient(new WebChromeClient());
         webView.addJavascriptInterface(new AndroidBridge(), "AndroidBudget");
 
@@ -92,6 +105,17 @@ public class MainActivity extends Activity {
         } else {
             webView.restoreState(savedInstanceState);
         }
+    }
+
+    private void applySafeAreaToWeb() {
+        if (!pageLoaded || webView == null) return;
+        final String js = "(function(){var r=document.documentElement;" +
+                "r.style.setProperty('--native-safe-top','" + safeTop + "px');" +
+                "r.style.setProperty('--native-safe-bottom','" + safeBottom + "px');" +
+                "r.style.setProperty('--native-safe-left','" + safeLeft + "px');" +
+                "r.style.setProperty('--native-safe-right','" + safeRight + "px');" +
+                "})();";
+        webView.post(() -> webView.evaluateJavascript(js, null));
     }
 
     @Override
