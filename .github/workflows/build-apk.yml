@@ -92,6 +92,23 @@ jobs:
       - name: Install Android platform
         run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
 
+      - name: Package official Android apksigner
+        shell: bash
+        run: |
+          BT="$ANDROID_SDK_ROOT/build-tools/35.0.0"
+          test -f "$BT/apksigner" || { echo "apksigner not found"; exit 1; }
+          mkdir -p /tmp/wafferli-apksigner/lib
+          cp "$BT/apksigner" /tmp/wafferli-apksigner/
+          cp "$BT/lib/apksigner.jar" /tmp/wafferli-apksigner/lib/
+          cd /tmp && zip -qr "$GITHUB_WORKSPACE/Wafferli-ApkSigner.zip" wafferli-apksigner
+
+      - name: Upload apksigner tool
+        uses: actions/upload-artifact@v4
+        with:
+          name: Wafferli-ApkSigner
+          path: Wafferli-ApkSigner.zip
+          if-no-files-found: error
+
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
