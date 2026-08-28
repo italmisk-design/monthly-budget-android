@@ -70,6 +70,7 @@ jobs:
             -x 'ios/*' \
             -x '.github/workflows/build-ios.yml' \
             -x 'app/build/*' \
+            -x 'app/wafferli-release.jks' \
             -x 'Wafferli-Android.apk' \
             -x 'Wafferli-Android-Source.zip'
 
@@ -97,11 +98,31 @@ jobs:
         with:
           gradle-version: '8.9'
 
-      - name: Build APK
-        run: gradle assembleDebug --stacktrace
+      - name: Prepare permanent signing key
+        env:
+          WAFFERLI_KEYSTORE_B64: ${{ secrets.WAFFERLI_KEYSTORE_B64 }}
+          WAFFERLI_STORE_PASSWORD: ${{ secrets.WAFFERLI_STORE_PASSWORD }}
+          WAFFERLI_KEY_PASSWORD: ${{ secrets.WAFFERLI_KEY_PASSWORD }}
+          WAFFERLI_KEY_ALIAS: ${{ secrets.WAFFERLI_KEY_ALIAS }}
+        run: |
+          test -n "$WAFFERLI_KEYSTORE_B64" || { echo "Missing WAFFERLI_KEYSTORE_B64 secret"; exit 1; }
+          test -n "$WAFFERLI_STORE_PASSWORD" || { echo "Missing WAFFERLI_STORE_PASSWORD secret"; exit 1; }
+          test -n "$WAFFERLI_KEY_PASSWORD" || { echo "Missing WAFFERLI_KEY_PASSWORD secret"; exit 1; }
+          test -n "$WAFFERLI_KEY_ALIAS" || { echo "Missing WAFFERLI_KEY_ALIAS secret"; exit 1; }
+          printf '%s' "$WAFFERLI_KEYSTORE_B64" | base64 --decode > app/wafferli-release.jks
+
+      - name: Build signed Release APK
+        env:
+          WAFFERLI_KEYSTORE_PATH: wafferli-release.jks
+          WAFFERLI_STORE_PASSWORD: ${{ secrets.WAFFERLI_STORE_PASSWORD }}
+          WAFFERLI_KEY_PASSWORD: ${{ secrets.WAFFERLI_KEY_PASSWORD }}
+          WAFFERLI_KEY_ALIAS: ${{ secrets.WAFFERLI_KEY_ALIAS }}
+          WAFFERLI_VERSION_CODE: ${{ github.run_number }}
+          WAFFERLI_VERSION_NAME: 1.2.${{ github.run_number }}
+        run: gradle assembleRelease --stacktrace
 
       - name: Rename APK
-        run: cp app/build/outputs/apk/debug/app-debug.apk Wafferli-Android.apk
+        run: cp app/build/outputs/apk/release/app-release.apk Wafferli-Android.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
