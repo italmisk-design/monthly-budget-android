@@ -36,6 +36,9 @@ jobs:
       - name: Apply Wafferli brand name
         run: python3 tools/patch_brand_name.py
 
+      - name: Apply full-screen safe area
+        run: python3 tools/patch_safe_area.py
+
       - name: Prepare iOS web assets
         run: |
           rm -rf ios/Tofeeri/WebAssets
