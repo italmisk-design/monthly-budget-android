@@ -61,20 +61,35 @@ public class MainActivity extends Activity {
         setContentView(root);
 
         root.setOnApplyWindowInsetsListener((v, insets) -> {
+            int topPx;
+            int bottomPx;
+            int leftPx;
+            int rightPx;
+
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 android.graphics.Insets bars = insets.getInsets(
                         WindowInsets.Type.systemBars() | WindowInsets.Type.displayCutout()
                 );
-                safeTop = bars.top;
-                safeBottom = bars.bottom;
-                safeLeft = bars.left;
-                safeRight = bars.right;
+                topPx = bars.top;
+                bottomPx = bars.bottom;
+                leftPx = bars.left;
+                rightPx = bars.right;
             } else {
-                safeTop = insets.getSystemWindowInsetTop();
-                safeBottom = insets.getSystemWindowInsetBottom();
-                safeLeft = insets.getSystemWindowInsetLeft();
-                safeRight = insets.getSystemWindowInsetRight();
+                topPx = insets.getSystemWindowInsetTop();
+                bottomPx = insets.getSystemWindowInsetBottom();
+                leftPx = insets.getSystemWindowInsetLeft();
+                rightPx = insets.getSystemWindowInsetRight();
             }
+
+            // WindowInsets are physical pixels, while CSS px in WebView follow the
+            // device-independent viewport scale. Convert once to CSS-friendly units.
+            float density = getResources().getDisplayMetrics().density;
+            if (density <= 0f) density = 1f;
+            safeTop = Math.round(topPx / density);
+            safeBottom = Math.round(bottomPx / density);
+            safeLeft = Math.round(leftPx / density);
+            safeRight = Math.round(rightPx / density);
+
             applySafeAreaToWeb();
             return insets;
         });
