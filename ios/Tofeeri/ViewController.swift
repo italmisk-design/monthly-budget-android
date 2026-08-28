@@ -21,11 +21,12 @@ final class ViewController: UIViewController, WKNavigationDelegate, WKUIDelegate
         webView.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(webView)
 
+        let safe = view.safeAreaLayoutGuide
         NSLayoutConstraint.activate([
-            webView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+            webView.topAnchor.constraint(equalTo: safe.topAnchor),
             webView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             webView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            webView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+            webView.bottomAnchor.constraint(equalTo: safe.bottomAnchor)
         ])
 
         let nested = Bundle.main.url(forResource: "index", withExtension: "html", subdirectory: "WebAssets")
