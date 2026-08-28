@@ -18,6 +18,23 @@ jobs:
       - name: Apply monthly funding patch
         run: python tools/patch_monthly_funding.py
 
+      - name: Apply monthly transfer patch
+        run: python tools/patch_monthly_transfer.py
+
+      - name: Validate patched JavaScript
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          s = Path('app/src/main/assets/index.html').read_text(encoding='utf-8')
+          m = re.search(r'<script>(.*)</script>', s, re.S)
+          if not m:
+              raise SystemExit('Inline script not found')
+          Path('/tmp/tofeeri-app.js').write_text(m.group(1), encoding='utf-8')
+          PY
+          node --check /tmp/tofeeri-app.js
+
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
