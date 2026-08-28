@@ -30,6 +30,9 @@ jobs:
       - name: Add balance sheet
         run: python3 tools/patch_balance_sheet.py
 
+      - name: Add balance sheet transfer details
+        run: python3 tools/patch_balance_transfers.py
+
       - name: Apply Wafferli logo
         run: python3 tools/patch_logo.py
 
