@@ -9,26 +9,13 @@ android {
     defaultConfig {
         applicationId "com.monthlybudget.app"
         minSdk 24
-        targetSdk 35
+        targetSdk 29
         versionCode (System.getenv("WAFFERLI_VERSION_CODE") ?: "3").toInteger()
         versionName System.getenv("WAFFERLI_VERSION_NAME") ?: "1.2"
     }
 
-    signingConfigs {
-        release {
-            def ksPath = System.getenv("WAFFERLI_KEYSTORE_PATH")
-            if (ksPath) {
-                storeFile file(ksPath)
-                storePassword System.getenv("WAFFERLI_STORE_PASSWORD")
-                keyAlias System.getenv("WAFFERLI_KEY_ALIAS")
-                keyPassword System.getenv("WAFFERLI_KEY_PASSWORD")
-            }
-        }
-    }
-
     buildTypes {
         release {
-            signingConfig signingConfigs.release
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
