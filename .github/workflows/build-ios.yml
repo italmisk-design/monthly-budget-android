@@ -42,6 +42,9 @@ jobs:
       - name: Make General Wallet real
         run: python3 tools/patch_real_general_wallet.py
 
+      - name: Apply primary wallet hierarchy
+        run: python3 tools/patch_primary_wallet_hierarchy.py
+
       - name: Apply full-screen safe area
         run: python3 tools/patch_safe_area.py
 
@@ -63,6 +66,7 @@ jobs:
           Path('/tmp/wafferli-ios.js').write_text(m.group(1), encoding='utf-8')
           PY
           node --check /tmp/wafferli-ios.js
+          node --check ios/Tofeeri/WebAssets/primary_wallet.js
 
       - name: Create iOS app icons
         run: |
