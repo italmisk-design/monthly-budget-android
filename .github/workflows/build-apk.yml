@@ -42,6 +42,9 @@ jobs:
       - name: Make General Wallet real
         run: python tools/patch_real_general_wallet.py
 
+      - name: Apply primary wallet hierarchy
+        run: python tools/patch_primary_wallet_hierarchy.py
+
       - name: Apply full-screen safe area
         run: python tools/patch_safe_area.py
 
@@ -58,6 +61,7 @@ jobs:
           Path('/tmp/wafferli-app.js').write_text(m.group(1), encoding='utf-8')
           PY
           node --check /tmp/wafferli-app.js
+          node --check app/src/main/assets/primary_wallet.js
 
       - name: Create matching Android source ZIP
         run: |
