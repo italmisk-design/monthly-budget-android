@@ -41,6 +41,21 @@ jobs:
           PY
           node --check /tmp/tofeeri-app.js
 
+      - name: Create matching source ZIP
+        run: |
+          zip -qr Tofeeri-Source.zip . \
+            -x '.git/*' \
+            -x 'app/build/*' \
+            -x 'Tofeeri.apk' \
+            -x 'Tofeeri-Source.zip'
+
+      - name: Upload source ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: Tofeeri-Source
+          path: Tofeeri-Source.zip
+          if-no-files-found: error
+
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
