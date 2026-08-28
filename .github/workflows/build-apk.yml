@@ -24,6 +24,9 @@ jobs:
       - name: Improve category manager
         run: python tools/patch_category_manager.py
 
+      - name: Add transaction filters
+        run: python tools/patch_transaction_filters.py
+
       - name: Validate patched JavaScript
         shell: bash
         run: |
