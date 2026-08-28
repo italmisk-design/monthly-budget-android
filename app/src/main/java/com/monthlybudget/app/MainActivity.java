@@ -13,6 +13,7 @@ import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.widget.FrameLayout;
 import android.widget.Toast;
 
 import org.json.JSONObject;
@@ -37,29 +38,41 @@ public class MainActivity extends Activity {
         getWindow().setStatusBarColor(Color.rgb(243, 246, 245));
         getWindow().setNavigationBarColor(Color.WHITE);
         getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            getWindow().setDecorFitsSystemWindows(false);
-        }
+
+        final FrameLayout root = new FrameLayout(this);
+        root.setBackgroundColor(Color.rgb(243, 246, 245));
+        root.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
 
         webView = new WebView(this);
         webView.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
-        webView.setOnApplyWindowInsetsListener((v, insets) -> {
-            int top;
-            int bottom;
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                android.graphics.Insets bars = insets.getInsets(WindowInsets.Type.systemBars());
-                top = bars.top;
-                bottom = bars.bottom;
-            } else {
-                top = insets.getSystemWindowInsetTop();
-                bottom = insets.getSystemWindowInsetBottom();
-            }
-            v.setPadding(0, top, 0, bottom);
-            return insets;
-        });
+        webView.setBackgroundColor(Color.rgb(243, 246, 245));
 
-        setContentView(webView);
-        webView.requestApplyInsets();
+        FrameLayout.LayoutParams webParams = new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+        );
+        root.addView(webView, webParams);
+        setContentView(root);
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            getWindow().setDecorFitsSystemWindows(false);
+            root.setOnApplyWindowInsetsListener((v, insets) -> {
+                android.graphics.Insets bars = insets.getInsets(
+                        WindowInsets.Type.systemBars() | WindowInsets.Type.displayCutout()
+                );
+                FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) webView.getLayoutParams();
+                if (lp.topMargin != bars.top || lp.bottomMargin != bars.bottom ||
+                        lp.leftMargin != bars.left || lp.rightMargin != bars.right) {
+                    lp.topMargin = bars.top;
+                    lp.bottomMargin = bars.bottom;
+                    lp.leftMargin = bars.left;
+                    lp.rightMargin = bars.right;
+                    webView.setLayoutParams(lp);
+                }
+                return insets;
+            });
+            root.requestApplyInsets();
+        }
 
         WebSettings settings = webView.getSettings();
         settings.setJavaScriptEnabled(true);
