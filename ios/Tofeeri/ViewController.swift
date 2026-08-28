@@ -17,11 +17,12 @@ final class ViewController: UIViewController, WKNavigationDelegate, WKUIDelegate
         webView.navigationDelegate = self
         webView.uiDelegate = self
         webView.allowsBackForwardNavigationGestures = true
+        webView.scrollView.contentInsetAdjustmentBehavior = .never
         webView.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(webView)
 
         NSLayoutConstraint.activate([
-            webView.topAnchor.constraint(equalTo: view.topAnchor),
+            webView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
             webView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             webView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             webView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
@@ -30,7 +31,7 @@ final class ViewController: UIViewController, WKNavigationDelegate, WKUIDelegate
         let nested = Bundle.main.url(forResource: "index", withExtension: "html", subdirectory: "WebAssets")
         let root = Bundle.main.url(forResource: "index", withExtension: "html")
         guard let indexURL = nested ?? root else {
-            showError("تعذر تحميل ملفات توفيري")
+            showError("تعذر تحميل ملفات وفرلي")
             return
         }
 
