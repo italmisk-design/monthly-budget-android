@@ -9,9 +9,9 @@ android {
     defaultConfig {
         applicationId "com.monthlybudget.app"
         minSdk 24
-        targetSdk 29
-        versionCode (System.getenv("WAFFERLI_VERSION_CODE") ?: "3").toInteger()
-        versionName System.getenv("WAFFERLI_VERSION_NAME") ?: "1.2"
+        targetSdk 35
+        versionCode = (System.getenv("WAFFERLI_VERSION_CODE") ?: "3").toInteger()
+        versionName = System.getenv("WAFFERLI_VERSION_NAME") ?: "1.2"
     }
 
     buildTypes {
