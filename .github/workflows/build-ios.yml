@@ -51,8 +51,9 @@ jobs:
 
       - name: Create iOS app icons
         run: |
-          python3 -m pip install pillow
-          python3 - <<'PY'
+          python3 -m venv /tmp/tofeeri-icon-venv
+          /tmp/tofeeri-icon-venv/bin/python -m pip install pillow
+          /tmp/tofeeri-icon-venv/bin/python - <<'PY'
           from pathlib import Path
           from PIL import Image, ImageDraw
           import json
