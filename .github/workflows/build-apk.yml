@@ -27,6 +27,9 @@ jobs:
       - name: Add transaction filters
         run: python tools/patch_transaction_filters.py
 
+      - name: Add balance sheet
+        run: python tools/patch_balance_sheet.py
+
       - name: Apply Wafferli logo
         run: python tools/patch_logo.py
 
