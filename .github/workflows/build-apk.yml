@@ -27,6 +27,9 @@ jobs:
       - name: Add transaction filters
         run: python tools/patch_transaction_filters.py
 
+      - name: Apply Tofeeri logo
+        run: python tools/patch_logo.py
+
       - name: Validate patched JavaScript
         shell: bash
         run: |
@@ -41,19 +44,21 @@ jobs:
           PY
           node --check /tmp/tofeeri-app.js
 
-      - name: Create matching source ZIP
+      - name: Create matching Android source ZIP
         run: |
-          zip -qr Tofeeri-Source.zip . \
+          zip -qr Tofeeri-Android-Source.zip . \
             -x '.git/*' \
+            -x 'ios/*' \
+            -x '.github/workflows/build-ios.yml' \
             -x 'app/build/*' \
             -x 'Tofeeri.apk' \
-            -x 'Tofeeri-Source.zip'
+            -x 'Tofeeri-Android-Source.zip'
 
-      - name: Upload source ZIP
+      - name: Upload Android source ZIP
         uses: actions/upload-artifact@v4
         with:
-          name: Tofeeri-Source
-          path: Tofeeri-Source.zip
+          name: Tofeeri-Android-Source
+          path: Tofeeri-Android-Source.zip
           if-no-files-found: error
 
       - name: Set up JDK 17
@@ -77,11 +82,11 @@ jobs:
         run: gradle assembleDebug --stacktrace
 
       - name: Rename APK
-        run: cp app/build/outputs/apk/debug/app-debug.apk Tofeeri.apk
+        run: cp app/build/outputs/apk/debug/app-debug.apk Tofeeri-Android.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: Tofeeri-APK
-          path: Tofeeri.apk
+          name: Tofeeri-Android-APK
+          path: Tofeeri-Android.apk
           if-no-files-found: error

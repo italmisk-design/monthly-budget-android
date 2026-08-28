@@ -1,0 +1,30 @@
+name: Tofeeri
+options:
+  bundleIdPrefix: com.monthlybudget
+  deploymentTarget:
+    iOS: "15.0"
+settings:
+  base:
+    SWIFT_VERSION: 5.0
+targets:
+  Tofeeri:
+    type: application
+    platform: iOS
+    deploymentTarget: "15.0"
+    sources:
+      - path: Tofeeri
+        excludes:
+          - WebAssets
+    resources:
+      - path: Tofeeri/WebAssets
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.monthlybudget.app.ios
+        PRODUCT_NAME: Tofeeri
+        INFOPLIST_FILE: Tofeeri/Info.plist
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SUPPORTS_MACCATALYST: NO
+        CODE_SIGNING_ALLOWED: NO
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+    scheme:
+      gatherCoverageData: false
