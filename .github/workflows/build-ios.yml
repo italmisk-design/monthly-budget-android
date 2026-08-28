@@ -1,4 +1,4 @@
-name: Build Tofeeri iOS
+name: Build Wafferli iOS
 
 on:
   workflow_dispatch:
@@ -27,8 +27,11 @@ jobs:
       - name: Add transaction filters
         run: python3 tools/patch_transaction_filters.py
 
-      - name: Apply Tofeeri logo
+      - name: Apply Wafferli logo
         run: python3 tools/patch_logo.py
+
+      - name: Apply Wafferli brand name
+        run: python3 tools/patch_brand_name.py
 
       - name: Prepare iOS web assets
         run: |
@@ -45,15 +48,15 @@ jobs:
           m = re.search(r'<script>(.*)</script>', s, re.S)
           if not m:
               raise SystemExit('Inline script not found')
-          Path('/tmp/tofeeri-ios.js').write_text(m.group(1), encoding='utf-8')
+          Path('/tmp/wafferli-ios.js').write_text(m.group(1), encoding='utf-8')
           PY
-          node --check /tmp/tofeeri-ios.js
+          node --check /tmp/wafferli-ios.js
 
       - name: Create iOS app icons
         run: |
-          python3 -m venv /tmp/tofeeri-icon-venv
-          /tmp/tofeeri-icon-venv/bin/python -m pip install pillow
-          /tmp/tofeeri-icon-venv/bin/python - <<'PY'
+          python3 -m venv /tmp/wafferli-icon-venv
+          /tmp/wafferli-icon-venv/bin/python -m pip install pillow
+          /tmp/wafferli-icon-venv/bin/python - <<'PY'
           from pathlib import Path
           from PIL import Image, ImageDraw
           import json
@@ -127,27 +130,27 @@ jobs:
           rm -rf Payload
           mkdir Payload
           cp -R build/Build/Products/Release-iphoneos/Tofeeri.app Payload/
-          zip -qry Tofeeri-iOS-Unsigned.ipa Payload
+          zip -qry Wafferli-iOS-Unsigned.ipa Payload
 
       - name: Package iOS source
         run: |
           cd ios
-          zip -qr Tofeeri-iOS-Source.zip . \
+          zip -qr Wafferli-iOS-Source.zip . \
             -x 'build/*' \
             -x 'Payload/*' \
-            -x 'Tofeeri-iOS-Unsigned.ipa' \
-            -x 'Tofeeri-iOS-Source.zip'
+            -x 'Wafferli-iOS-Unsigned.ipa' \
+            -x 'Wafferli-iOS-Source.zip'
 
       - name: Upload unsigned IPA
         uses: actions/upload-artifact@v4
         with:
-          name: Tofeeri-iOS-Unsigned
-          path: ios/Tofeeri-iOS-Unsigned.ipa
+          name: Wafferli-iOS-Unsigned
+          path: ios/Wafferli-iOS-Unsigned.ipa
           if-no-files-found: error
 
       - name: Upload iOS source
         uses: actions/upload-artifact@v4
         with:
-          name: Tofeeri-iOS-Source
-          path: ios/Tofeeri-iOS-Source.zip
+          name: Wafferli-iOS-Source
+          path: ios/Wafferli-iOS-Source.zip
           if-no-files-found: error
