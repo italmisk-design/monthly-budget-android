@@ -36,6 +36,9 @@ jobs:
       - name: Apply Wafferli brand name
         run: python3 tools/patch_brand_name.py
 
+      - name: Make General Wallet real
+        run: python3 tools/patch_real_general_wallet.py
+
       - name: Apply full-screen safe area
         run: python3 tools/patch_safe_area.py
 
