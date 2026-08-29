@@ -48,6 +48,9 @@ jobs:
       - name: Apply full-screen safe area
         run: python3 tools/patch_safe_area.py
 
+      - name: Add Google Drive backup UI
+        run: python3 tools/patch_google_drive.py
+
       - name: Prepare iOS web assets
         run: |
           rm -rf ios/Tofeeri/WebAssets
