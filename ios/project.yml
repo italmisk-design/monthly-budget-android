@@ -15,8 +15,10 @@ targets:
       - path: Tofeeri
         excludes:
           - WebAssets
+          - GoogleService-Info.plist
     resources:
       - path: Tofeeri/WebAssets
+      - path: Tofeeri/GoogleService-Info.plist
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.monthlybudget.app.ios
