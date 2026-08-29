@@ -17,7 +17,7 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           import base64
-          s = ''.join((Path('tools/logo_parts') / f'part{i}.txt').read_text(encoding='utf-8').strip() for i in range(1,5))
+          s = ''.join((Path('tools/logo_parts') / f'part{i}.txt').read_text(encoding='utf-8').strip() for i in range(1,6))
           data = base64.b64decode(s)
           Path('app/src/main/assets/wafferli_logo.jpg').write_bytes(data)
           Path('app/src/main/res/drawable/wafferli_logo.jpg').write_bytes(data)
