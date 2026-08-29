@@ -12,6 +12,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Restore official Wafferli logo
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import base64
+          data = base64.b64decode(Path('tools/wafferli_logo_latest.b64').read_text(encoding='utf-8').strip())
+          Path('app/src/main/assets/wafferli_logo.jpg').write_bytes(data)
+          Path('app/src/main/res/drawable/wafferli_logo.jpg').write_bytes(data)
+          PY
+
       - name: Apply monthly confirmation patch
         run: python tools/patch_monthly_confirm.py
 
