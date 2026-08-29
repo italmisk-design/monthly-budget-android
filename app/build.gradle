@@ -14,7 +14,19 @@ android {
         versionName = System.getenv("WAFFERLI_VERSION_NAME") ?: "1.2"
     }
 
+    signingConfigs {
+        wafferliTest {
+            storeFile file("../tools/wafferli-test.keystore")
+            storePassword "WafferliTest2026"
+            keyAlias "wafferli"
+            keyPassword "WafferliTest2026"
+        }
+    }
+
     buildTypes {
+        debug {
+            signingConfig signingConfigs.wafferliTest
+        }
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
