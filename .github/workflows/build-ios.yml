@@ -1,8 +1,8 @@
-name: Build Wafferli v13.1 iOS
+name: Build Wafferli v15 iOS
 
 on:
   push:
-    branches: [ "v13-1-google-native-fix" ]
+    branches: [ "v15-auto-merge-sync-2" ]
   workflow_dispatch:
 
 jobs:
@@ -40,6 +40,11 @@ jobs:
         run: python3 tools/patch_google_drive.py
       - name: Add iOS native file picker
         run: python3 tools/patch_ios_native_backup.py
+
+      - name: Apply v15 auto merge sync
+        run: |
+          cat tools/v15_patch_parts/part*.txt > /tmp/v15.patch
+          git apply --include='app/src/main/assets/index.html' --include='ios/**' /tmp/v15.patch
 
       - name: Prepare iOS web assets
         run: |
@@ -79,11 +84,11 @@ jobs:
           rm -rf Payload
           mkdir Payload
           cp -R build/Build/Products/Release-iphoneos/Tofeeri.app Payload/
-          zip -qry Wafferli-v13.1-iOS-Unsigned.ipa Payload
+          zip -qry Wafferli-v15-iOS-Unsigned.ipa Payload
 
       - name: Upload unsigned IPA
         uses: actions/upload-artifact@v4
         with:
-          name: Wafferli-v13.1-iOS-Unsigned
-          path: ios/Wafferli-v13.1-iOS-Unsigned.ipa
+          name: Wafferli-v15-iOS-Unsigned
+          path: ios/Wafferli-v15-iOS-Unsigned.ipa
           if-no-files-found: error
