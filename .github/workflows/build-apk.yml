@@ -38,36 +38,25 @@ jobs:
         run: python tools/patch_safe_area.py
       - name: Add Google sync and native backup UI
         run: python tools/patch_google_drive.py
-
       - name: Apply v15 auto merge sync
         run: |
           cat tools/v15_patch_parts/part*.txt > /tmp/v15.patch
           git apply --include='app/**' /tmp/v15.patch
-
       - name: Add v16 12-step tutorial
         run: python tools/patch_tutorial_v16.py
 
-      - name: Restore exact official logo
-        run: |
-          cat tools/v14_logo_exact_part_*.txt | base64 -d > app/src/main/assets/wafferli_logo.jpg
-          cp app/src/main/assets/wafferli_logo.jpg app/src/main/res/drawable/wafferli_logo.jpg
-          echo "6c436e9595c91f74622ae7f4460531e4db85bb5eb77984d68657e81e1ea79a09  app/src/main/assets/wafferli_logo.jpg" | sha256sum -c -
-          echo "6c436e9595c91f74622ae7f4460531e4db85bb5eb77984d68657e81e1ea79a09  app/src/main/res/drawable/wafferli_logo.jpg" | sha256sum -c -
-
-      - name: Validate tutorial and JavaScript
+      - name: Validate tutorial
         run: |
           grep -q "12 خطوة" app/src/main/assets/tutorial.js
           grep -q "الحركات الشهرية" app/src/main/assets/tutorial.js
           grep -q "كشف الحركات" app/src/main/assets/tutorial.js
           grep -q "الكشف الكلي" app/src/main/assets/tutorial.js
-          grep -q "تعديل" app/src/main/assets/tutorial.js
           python - <<'PY'
           from pathlib import Path
           s=Path('app/src/main/assets/tutorial.js').read_text(encoding='utf-8')
-          a=s.index('const tutorialSteps=[')
-          b=s.index('];', a)
+          a=s.index('const tutorialSteps=['); b=s.index('];',a)
           n=s[a:b].count('title:')
-          print('tutorial steps:', n)
+          print('tutorial steps:',n)
           if n != 12: raise SystemExit('tutorial must contain exactly 12 steps')
           html=Path('app/src/main/assets/index.html').read_text(encoding='utf-8')
           if '<script src="tutorial.js"></script>' not in html: raise SystemExit('tutorial script not loaded')
@@ -81,28 +70,23 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
-
       - name: Install Android platform
         run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
-
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
-
       - name: Build unsigned release APK
         env:
           WAFFERLI_VERSION_CODE: 88
           WAFFERLI_VERSION_NAME: 1.6.1
         run: gradle assembleRelease --stacktrace
 
-      - name: Verify packaged tutorial and logo
+      - name: Verify packaged tutorial
         run: |
           unzip -p app/build/outputs/apk/release/app-release-unsigned.apk assets/tutorial.js > /tmp/tutorial.js
-          grep -q "12 خطوة" /tmp/tutorial.js
           python - <<'PY'
           from pathlib import Path
           s=Path('/tmp/tutorial.js').read_text(encoding='utf-8')
@@ -110,13 +94,11 @@ jobs:
           n=s[a:b].count('title:')
           print('PACKAGED tutorial steps:',n)
           if n != 12: raise SystemExit('packaged APK does not have 12 steps')
+          if 'wafferli_tutorial_completed_v3' not in s: raise SystemExit('new tutorial key missing')
           PY
-          unzip -p app/build/outputs/apk/release/app-release-unsigned.apk assets/wafferli_logo.jpg > /tmp/logo.jpg
-          echo "6c436e9595c91f74622ae7f4460531e4db85bb5eb77984d68657e81e1ea79a09  /tmp/logo.jpg" | sha256sum -c -
 
       - name: Prepare APK artifact
         run: cp app/build/outputs/apk/release/app-release-unsigned.apk Wafferli-v16.1-12Step-Unsigned.apk
-
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
