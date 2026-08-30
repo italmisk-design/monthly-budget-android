@@ -1,0 +1,110 @@
++  }else if(action==='restore'&&!ok){
++    wafferliSyncRoundInFlight=false;
++    if(!wafferliGoogleManual&&hasMeaningfulLocalData())googleNative('backup',cloudSnapshot());
++    else if(wafferliGoogleManual&&message)toast(message)
++  }
++  if(action==='backup'){
++    wafferliSyncRoundInFlight=false;
++    if(wafferliGoogleManual&&ok)toast('تمت المزامنة مع Google');
++    if(!ok&&wafferliGoogleManual&&message)toast(message);
++    wafferliGoogleManual=false;
++    if(wafferliSyncPending){wafferliSyncPending=false;setTimeout(()=>syncStartRound(false),150)}
++  }
+   if(action==='restore'&&!ok)wafferliGoogleManual=false;
+   if(b){b.textContent='مزامنة الآن';b.disabled=!wafferliGoogleState.signedIn}
+ };
++window.wafferliAppBackgrounded=function(){
++  if(!wafferliGoogleState.signedIn)return;
++  clearTimeout(wafferliGoogleTimer);
++  try{googleNative('backup',cloudSnapshot())}catch(e){}
++};
++window.wafferliAppForegrounded=function(){
++  if(!wafferliGoogleState.signedIn)return;
++  setTimeout(()=>syncStartRound(true),180)
++};
+ setTimeout(()=>{installGooglePersistHook();googleNative('status','')},650);
+ 
+ </script>
+--- a/app/src/main/java/com/monthlybudget/app/MainActivity.java
++++ b/app/src/main/java/com/monthlybudget/app/MainActivity.java
+@@ -240,8 +240,19 @@
+         return response(c);
+     }
+ 
+-    private String latestBackupId() throws Exception {
+-        String q = "name='" + BACKUP_NAME + "' and trashed=false";
++    private String syncFileName(String content) {
++        try {
++            JSONObject o = new JSONObject(content == null ? "" : content);
++            if ("wafferli-cloud-v2".equals(o.optString("format", ""))) {
++                String id = o.optString("deviceId", "").replaceAll("[^A-Za-z0-9_-]", "");
++                if (!id.isEmpty()) return "Wafferli-Sync-" + id + ".json";
++            }
++        } catch (Exception ignored) {}
++        return BACKUP_NAME;
++    }
++
++    private String latestBackupId(String fileName) throws Exception {
++        String q = "name='" + fileName.replace("'", "\\'") + "' and trashed=false";
+         String url = "https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=" + enc(q) +
+                 "&fields=" + enc("files(id,name,modifiedTime)") + "&orderBy=" + enc("modifiedTime desc") + "&pageSize=1";
+         JSONObject obj = new JSONObject(authedGet(url));
+@@ -249,8 +260,18 @@
+         return files != null && files.length() > 0 ? files.getJSONObject(0).optString("id", "") : "";
+     }
+ 
++    private JSONArray listSyncFiles() throws Exception {
++        String q = "(name contains 'Wafferli-Sync-' or name='" + BACKUP_NAME + "') and trashed=false";
++        String url = "https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=" + enc(q) +
++                "&fields=" + enc("files(id,name,modifiedTime)") + "&orderBy=" + enc("modifiedTime desc") + "&pageSize=100";
++        JSONObject obj = new JSONObject(authedGet(url));
++        JSONArray files = obj.optJSONArray("files");
++        return files == null ? new JSONArray() : files;
++    }
++
+     private void uploadBackup(String content) throws Exception {
+-        String id = latestBackupId();
++        String fileName = syncFileName(content);
++        String id = latestBackupId(fileName);
+         if (!id.isEmpty()) {
+             HttpURLConnection c = (HttpURLConnection) new URL("https://www.googleapis.com/upload/drive/v3/files/" + enc(id) + "?uploadType=media").openConnection();
+             c.setConnectTimeout(20000); c.setReadTimeout(30000); c.setRequestMethod("POST"); c.setDoOutput(true);
+@@ -261,7 +282,7 @@
+             response(c); return;
+         }
+         String boundary = "wafferli_" + System.currentTimeMillis();
+-        JSONObject meta = new JSONObject(); meta.put("name", BACKUP_NAME); meta.put("parents", new JSONArray().put("appDataFolder"));
++        JSONObject meta = new JSONObject(); meta.put("name", fileName); meta.put("parents", new JSONArray().put("appDataFolder"));
+         String body = "--" + boundary + "\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n" + meta +
+                 "\r\n--" + boundary + "\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n" + content + "\r\n--" + boundary + "--\r\n";
+         HttpURLConnection c = (HttpURLConnection) new URL("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart").openConnection();
+@@ -273,9 +294,24 @@
+     }
+ 
+     private String downloadBackup() throws Exception {
+-        String id = latestBackupId();
+-        if (id.isEmpty()) throw new Exception("لا توجد نسخة احتياطية على Google Drive");
+-        return authedGet("https://www.googleapis.com/drive/v3/files/" + enc(id) + "?alt=media");
++        JSONArray files = listSyncFiles();
++        if (files.length() == 0) throw new Exception("لا توجد نسخة احتياطية على Google Drive");
++        JSONArray snapshots = new JSONArray();
++        for (int i = 0; i < files.length(); i++) {
++            JSONObject f = files.optJSONObject(i);
++            if (f == null) continue;
++            String id = f.optString("id", "");
++            if (id.isEmpty()) continue;
++            try {
++                String body = authedGet("https://www.googleapis.com/drive/v3/files/" + enc(id) + "?alt=media");
++                snapshots.put(new JSONObject(body));
++            } catch (Exception ignored) {}
++        }
++        if (snapshots.length() == 0) throw new Exception("لا توجد نسخة قابلة للقراءة على Google Drive");
++        JSONObject bundle = new JSONObject();
++        bundle.put("format", "wafferli-cloud-bundle-v2");
++        bundle.put("snapshots", snapshots);
++        return bundle.toString();
+     }
+ 
+     private String cleanError(Exception e) {
+@@ -285,6 +321,16 @@
+         return m;
