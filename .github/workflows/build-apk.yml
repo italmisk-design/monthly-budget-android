@@ -56,6 +56,13 @@ jobs:
           cat tools/v15_patch_parts/part*.txt > /tmp/v15.patch
           git apply --include='app/**' /tmp/v15.patch
 
+      - name: Lock exact v14 logo bytes
+        run: |
+          cat tools/v14_logo_exact_part_*.txt | base64 -d > app/src/main/assets/wafferli_logo.jpg
+          cp app/src/main/assets/wafferli_logo.jpg app/src/main/res/drawable/wafferli_logo.jpg
+          echo "6c436e9595c91f74622ae7f4460531e4db85bb5eb77984d68657e81e1ea79a09  app/src/main/assets/wafferli_logo.jpg" | sha256sum -c -
+          echo "6c436e9595c91f74622ae7f4460531e4db85bb5eb77984d68657e81e1ea79a09  app/src/main/res/drawable/wafferli_logo.jpg" | sha256sum -c -
+
       - name: Validate JavaScript
         run: |
           python - <<'PY'
@@ -88,16 +95,21 @@ jobs:
 
       - name: Build unsigned release APK
         env:
-          WAFFERLI_VERSION_CODE: 82
-          WAFFERLI_VERSION_NAME: 1.5.0
+          WAFFERLI_VERSION_CODE: 83
+          WAFFERLI_VERSION_NAME: 1.5.1
         run: gradle assembleRelease --stacktrace
 
+      - name: Verify built APK contains exact v14 logo
+        run: |
+          unzip -p app/build/outputs/apk/release/app-release-unsigned.apk assets/wafferli_logo.jpg > /tmp/apk-logo.jpg
+          echo "6c436e9595c91f74622ae7f4460531e4db85bb5eb77984d68657e81e1ea79a09  /tmp/apk-logo.jpg" | sha256sum -c -
+
       - name: Prepare APK artifact
-        run: cp app/build/outputs/apk/release/app-release-unsigned.apk Wafferli-v15-Unsigned.apk
+        run: cp app/build/outputs/apk/release/app-release-unsigned.apk Wafferli-v15-Redo-Unsigned.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: Wafferli-v15-Unsigned-APK
-          path: Wafferli-v15-Unsigned.apk
+          name: Wafferli-v15-Redo-Unsigned-APK
+          path: Wafferli-v15-Redo-Unsigned.apk
           if-no-files-found: error
