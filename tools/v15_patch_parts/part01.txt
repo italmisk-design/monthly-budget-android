@@ -1,0 +1,110 @@
++      Object.keys(delMap).forEach(id=>{const cand={deleted:true,ts:Number(delMap[id])||s.updatedAt||1,origin:s.deviceId,value:null};if(syncCandidateBetter(winners[id],cand))winners[id]=cand});
++    });
++    const allOrder=[...localOrder[c]];
++    snaps.forEach(s=>(Array.isArray(s.data[c])?s.data[c]:[]).forEach(v=>{const id=v&&v.id!=null?String(v.id):'';if(id&&!allOrder.includes(id))allOrder.push(id)}));
++    const alive=[];allOrder.forEach(id=>{const w=winners[id];if(w&&!w.deleted){alive.push(syncCopy(w.value));meta.records[c][id]=w.ts}else if(w&&w.deleted)meta.tombstones[c][id]=w.ts});
++    Object.keys(winners).forEach(id=>{if(allOrder.includes(id))return;const w=winners[id];if(!w.deleted){alive.push(syncCopy(w.value));meta.records[c][id]=w.ts}else meta.tombstones[c][id]=w.ts});
++    merged[c]=alive;
++  });
++  SYNC_FIELDS.forEach(f=>{
++    let best=null;
++    snaps.forEach(s=>{if(!Object.prototype.hasOwnProperty.call(s.data,f))return;const cand={ts:Number(s.meta.fields[f])||s.updatedAt||1,origin:s.deviceId,value:s.data[f]};if(syncCandidateBetter(best,cand))best=cand});
++    if(best){merged[f]=syncCopy(best.value);meta.fields[f]=best.ts}
++  });
++  merged.version=Math.max(...snaps.map(s=>Number(s.data.version)||0),Number(merged.version)||6,6);
++  if(!merged.selectedMonth)merged.selectedMonth=today().slice(0,7);
++  meta.updatedAt=Math.max(1,...snaps.map(s=>syncMaxTs(s.meta)));
++  return{data:merged,meta}
++}
+ function googleAccountAction(){googleNative(wafferliGoogleState.signedIn?'signout':'signin','')}
+ function googleSyncNow(){
+   if(!wafferliGoogleState.signedIn){toast('اربط حساب Google أولاً');return}
+   wafferliGoogleManual=true;
+   const b=document.getElementById('googleSyncBtn');if(b){b.disabled=true;b.textContent='جاري المزامنة...'}
++  syncStartRound(true)
++}
++function syncStartRound(immediate){
++  if(wafferliGoogleApplying||!wafferliGoogleState.signedIn)return;
++  if(wafferliSyncRoundInFlight){wafferliSyncPending=true;return}
++  wafferliSyncRoundInFlight=true;wafferliSyncPending=false;
+   googleNative('restore','')
+ }
+-function scheduleGooglePush(){
++function scheduleGoogleSync(){
+   if(wafferliGoogleApplying||!wafferliGoogleState.signedIn)return;
+   clearTimeout(wafferliGoogleTimer);
+-  wafferliGoogleTimer=setTimeout(()=>googleNative('backup',cloudSnapshot()),1400)
++  wafferliGoogleTimer=setTimeout(()=>syncStartRound(false),1200)
+ }
+ function installGooglePersistHook(){
+   if(typeof persist!=='function'||persist.__googleWrapped)return;
++  syncEnsureMeta();
+   const original=persist;
+-  const wrapped=function(){const r=original.apply(this,arguments);if(!wafferliGoogleApplying){localStorage.setItem(WAFFERLI_CLOUD_TS,String(Date.now()));scheduleGooglePush()}return r};
++  const wrapped=function(){
++    let changed=false;
++    if(!wafferliGoogleApplying)changed=syncTrackLocalChanges();
++    const r=original.apply(this,arguments);
++    if(changed)scheduleGoogleSync();
++    return r
++  };
+   wrapped.__googleWrapped=true;window.persist=wrapped
+ }
+ window.wafferliGoogleStatus=function(info){
+@@ -325,42 +450,57 @@
+   if(st){st.textContent=wafferliGoogleState.signedIn?(wafferliGoogleState.email||wafferliGoogleState.name||'تم ربط حساب Google'):'غير مربوط';st.classList.toggle('connected',wafferliGoogleState.signedIn)}
+   if(acc)acc.textContent=wafferliGoogleState.signedIn?'تسجيل خروج':'ربط';
+   if(sync)sync.disabled=!wafferliGoogleState.signedIn;
+-  if(wafferliGoogleState.signedIn&&!wafferliGoogleChecked){wafferliGoogleChecked=true;setTimeout(()=>googleNative('restore',''),450)}
+-  if(!wafferliGoogleState.signedIn)wafferliGoogleChecked=false
++  if(wafferliGoogleState.signedIn&&!wafferliGoogleChecked){wafferliGoogleChecked=true;setTimeout(()=>syncStartRound(true),350)}
++  if(!wafferliGoogleState.signedIn){wafferliGoogleChecked=false;wafferliSyncRoundInFlight=false;wafferliSyncPending=false}
+ };
+ window.loadBudgetFromGoogle=function(text){
+   try{
+-    const o=JSON.parse(text),d=(o&&o.data)||o;
+-    if(!d||!Array.isArray(d.wallets)||!Array.isArray(d.transactions)||!Array.isArray(d.rates))throw new Error('نسخة Google غير صالحة');
+-    const remoteTs=Number(o&&o.updatedAt)||1,localTs=cloudLocalTs();
+-    if(remoteTs>localTs||!hasMeaningfulLocalData()){
+-      wafferliGoogleApplying=true;
+-      state=d;
+-      if(!Array.isArray(state.monthlyTemplates))state.monthlyTemplates=[];
+-      if(!Array.isArray(state.monthlyRuns))state.monthlyRuns=[];
+-      if(!state.selectedMonth)state.selectedMonth=today().slice(0,7);
+-      localStorage.setItem(WAFFERLI_CLOUD_TS,String(remoteTs));
+-      persist();
+-      wafferliGoogleApplying=false;
+-      renderAll();
+-      if(wafferliGoogleManual)toast('تم جلب أحدث البيانات من Google')
+-    }else if(localTs>remoteTs){
+-      googleNative('backup',cloudSnapshot());
+-      if(wafferliGoogleManual)toast('تم إرسال أحدث البيانات إلى Google')
+-    }else if(wafferliGoogleManual)toast('بياناتك متزامنة')
+-  }catch(e){if(wafferliGoogleManual)toast('تعذر قراءة نسخة Google')}
+-  wafferliGoogleManual=false;
+-  const b=document.getElementById('googleSyncBtn');if(b){b.textContent='مزامنة الآن';b.disabled=!wafferliGoogleState.signedIn}
++    const o=JSON.parse(text);let remotes=[];
++    if(o&&o.format==='wafferli-cloud-bundle-v2'&&Array.isArray(o.snapshots))remotes=o.snapshots;
++    else remotes=[o];
++    const result=syncMergeSnapshots(remotes);
++    wafferliGoogleApplying=true;
++    state=result.data;wafferliSyncMeta=result.meta;wafferliSyncMeta.deviceId=syncDeviceId();syncSaveMeta();
++    localStorage.setItem(WAFFERLI_CLOUD_TS,String(syncMaxTs(wafferliSyncMeta)));
++    persist();wafferliSyncLastState=syncCopy(state);wafferliGoogleApplying=false;
++    renderAll();
++    googleNative('backup',cloudSnapshot());
++    if(wafferliGoogleManual)toast('تم دمج أحدث بيانات أجهزتك')
++  }catch(e){
++    wafferliGoogleApplying=false;
++    wafferliSyncRoundInFlight=false;
++    if(wafferliGoogleManual)toast('تعذر قراءة بيانات Google')
++  }
+ };
+ window.wafferliGoogleDone=function(action,ok,message){
+   const b=document.getElementById('googleSyncBtn');
+   if(action==='signin'||action==='signout')setTimeout(()=>googleNative('status',''),250);
+-  if(action==='restore'&&!ok&&wafferliGoogleState.signedIn&&hasMeaningfulLocalData()&&String(message||'').includes('لا توجد نسخة')){googleNative('backup',cloudSnapshot());ok=true;if(wafferliGoogleManual)toast('تم إنشاء أول نسخة على Google')}
+-  else if(!ok&&wafferliGoogleManual&&message)toast(message);
+-  if(action==='backup'&&wafferliGoogleManual&&ok)toast('تمت المزامنة مع Google');
++  if(action==='restore'&&!ok&&wafferliGoogleState.signedIn&&String(message||'').includes('لا توجد نسخة')){
++    googleNative('backup',cloudSnapshot());ok=true;if(wafferliGoogleManual)toast('تم إنشاء أول نسخة على Google')
