@@ -1,0 +1,110 @@
++                    completion(.success(o?["files"] as? [[String:Any]] ?? []))
++                } catch { completion(.failure(error)) }
+             }
+         }
+     }
+ 
+     private func uploadBackup(_ content: String) {
+         withAccessToken { result in
+-            guard case .success(let token) = result else { if case .failure(let e)=result { self.googleDone("backup",false,self.clean(e)) }; return }
+-            self.latestBackupID(token: token) { idResult in
++            guard case .success(let token) = result else {
++                if case .failure(let e)=result { self.googleDone("backup",false,self.clean(e)) }
++                return
++            }
++            let fileName = self.syncFileName(content)
++            self.latestBackupID(token: token, fileName: fileName) { idResult in
+                 switch idResult {
+                 case .failure(let e): self.googleDone("backup",false,self.clean(e))
+                 case .success(let id):
+                     if !id.isEmpty {
+                         let u = URL(string:"https://www.googleapis.com/upload/drive/v3/files/\(id)?uploadType=media")!
+                         self.request(u, method:"PATCH", token:token, contentType:"application/json; charset=utf-8", body:content.data(using:.utf8)) { r in
+-                            switch r { case .success: self.googleDone("backup",true,"تم حفظ النسخة على Google Drive"); case .failure(let e): self.googleDone("backup",false,self.clean(e)) }
++                            switch r {
++                            case .success: self.googleDone("backup",true,"تم حفظ نسخة الجهاز على Google Drive")
++                            case .failure(let e): self.googleDone("backup",false,self.clean(e))
++                            }
+                         }
+-                    } else { self.createBackup(content, token: token) }
++                    } else {
++                        self.createBackup(content, token: token, fileName: fileName)
++                    }
+                 }
+             }
+         }
+     }
+ 
+-    private func createBackup(_ content:String, token:String) {
++    private func createBackup(_ content:String, token:String, fileName:String) {
+         let boundary = "wafferli_\(Int(Date().timeIntervalSince1970))"
+-        let meta = "{\"name\":\"\(backupName)\",\"parents\":[\"appDataFolder\"]}"
++        let safeName = fileName.replacingOccurrences(of: "\"", with: "")
++        let meta = "{\"name\":\"\(safeName)\",\"parents\":[\"appDataFolder\"]}"
+         let body = "--\(boundary)\r\nContent-Type: application/json; charset=utf-8\r\n\r\n\(meta)\r\n--\(boundary)\r\nContent-Type: application/json; charset=utf-8\r\n\r\n\(content)\r\n--\(boundary)--\r\n"
+         let u = URL(string:"https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart")!
+         request(u, method:"POST", token:token, contentType:"multipart/related; boundary=\(boundary)", body:body.data(using:.utf8)) { r in
+-            switch r { case .success: self.googleDone("backup",true,"تم حفظ النسخة على Google Drive"); case .failure(let e): self.googleDone("backup",false,self.clean(e)) }
++            switch r {
++            case .success: self.googleDone("backup",true,"تم حفظ نسخة الجهاز على Google Drive")
++            case .failure(let e): self.googleDone("backup",false,self.clean(e))
++            }
+         }
+     }
+ 
+     private func restoreBackup() {
+         withAccessToken { result in
+-            guard case .success(let token)=result else { if case .failure(let e)=result { self.googleDone("restore",false,self.clean(e)) }; return }
+-            self.latestBackupID(token:token) { ir in
+-                guard case .success(let id)=ir, !id.isEmpty else { self.googleDone("restore",false,"لا توجد نسخة احتياطية على Google Drive"); return }
+-                self.request(URL(string:"https://www.googleapis.com/drive/v3/files/\(id)?alt=media")!, token:token) { r in
+-                    switch r { case .failure(let e): self.googleDone("restore",false,self.clean(e)); case .success(let data):
+-                        let text=String(data:data,encoding:.utf8) ?? ""; self.eval("window.loadBudgetFromGoogle&&window.loadBudgetFromGoogle(\(self.jsQuote(text)));"); self.googleDone("restore",true,"تم تحميل النسخة من Google Drive") }
++            guard case .success(let token)=result else {
++                if case .failure(let e)=result { self.googleDone("restore",false,self.clean(e)) }
++                return
++            }
++            self.listSyncFiles(token: token) { listResult in
++                switch listResult {
++                case .failure(let e):
++                    self.googleDone("restore",false,self.clean(e))
++                case .success(let files):
++                    if files.isEmpty {
++                        self.googleDone("restore",false,"لا توجد نسخة احتياطية على Google Drive")
++                        return
++                    }
++                    let group = DispatchGroup()
++                    let lock = NSLock()
++                    var snapshots:[[String:Any]] = []
++                    for f in files {
++                        guard let id = f["id"] as? String, !id.isEmpty else { continue }
++                        group.enter()
++                        self.request(URL(string:"https://www.googleapis.com/drive/v3/files/\(id)?alt=media")!, token:token) { r in
++                            defer { group.leave() }
++                            if case .success(let data) = r,
++                               let obj = try? JSONSerialization.jsonObject(with:data) as? [String:Any] {
++                                lock.lock(); snapshots.append(obj); lock.unlock()
++                            }
++                        }
++                    }
++                    group.notify(queue: .global(qos: .userInitiated)) {
++                        lock.lock(); let all = snapshots; lock.unlock()
++                        guard !all.isEmpty else {
++                            self.googleDone("restore",false,"لا توجد نسخة قابلة للقراءة على Google Drive")
++                            return
++                        }
++                        let bundle:[String:Any] = ["format":"wafferli-cloud-bundle-v2","snapshots":all]
++                        guard let data = try? JSONSerialization.data(withJSONObject: bundle),
++                              let text = String(data:data,encoding:.utf8) else {
++                            self.googleDone("restore",false,"تعذر تجهيز بيانات المزامنة")
++                            return
++                        }
++                        self.eval("window.loadBudgetFromGoogle&&window.loadBudgetFromGoogle(\(self.jsQuote(text)));")
++                        self.googleDone("restore",true,"تم تحميل بيانات الأجهزة من Google Drive")
++                    }
+                 }
+             }
+         }
+--- a/ios/Tofeeri/Info.plist
++++ b/ios/Tofeeri/Info.plist
+@@ -17,7 +17,7 @@
