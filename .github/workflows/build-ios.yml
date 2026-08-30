@@ -44,7 +44,9 @@ jobs:
       - name: Apply v15 auto merge sync
         run: |
           cat tools/v15_patch_parts/part*.txt > /tmp/v15.patch
-          git apply --include='app/src/main/assets/index.html' --include='ios/**' /tmp/v15.patch
+          git apply --include='app/src/main/assets/index.html' --include='ios/Tofeeri/ViewController.swift' /tmp/v15.patch
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 1.5.0" ios/Tofeeri/Info.plist
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion 150" ios/Tofeeri/Info.plist
 
       - name: Prepare iOS web assets
         run: |
