@@ -45,14 +45,26 @@ jobs:
         run: |
           cat tools/v15_patch_parts/part*.txt > /tmp/v15.patch
           git apply --include='app/src/main/assets/index.html' --include='ios/Tofeeri/ViewController.swift' /tmp/v15.patch
-          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 1.5.0" ios/Tofeeri/Info.plist
-          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion 150" ios/Tofeeri/Info.plist
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 1.5.1" ios/Tofeeri/Info.plist
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion 151" ios/Tofeeri/Info.plist
+
+      - name: Lock exact v14 logo bytes
+        run: |
+          cat tools/v14_logo_exact_part_*.txt | base64 -D > app/src/main/assets/wafferli_logo.jpg
+          cp app/src/main/assets/wafferli_logo.jpg app/src/main/res/drawable/wafferli_logo.jpg
+          echo "6c436e9595c91f74622ae7f4460531e4db85bb5eb77984d68657e81e1ea79a09  app/src/main/assets/wafferli_logo.jpg" | shasum -a 256 -c -
+          echo "6c436e9595c91f74622ae7f4460531e4db85bb5eb77984d68657e81e1ea79a09  app/src/main/res/drawable/wafferli_logo.jpg" | shasum -a 256 -c -
 
       - name: Prepare iOS web assets
         run: |
           rm -rf ios/Tofeeri/WebAssets
           mkdir -p ios/Tofeeri/WebAssets
           cp -R app/src/main/assets/. ios/Tofeeri/WebAssets/
+          echo "6c436e9595c91f74622ae7f4460531e4db85bb5eb77984d68657e81e1ea79a09  ios/Tofeeri/WebAssets/wafferli_logo.jpg" | shasum -a 256 -c -
+
+      - name: Verify v14 iPhone app icon remains untouched
+        run: |
+          echo "669344a9f0603c55a9192cd79aeb82b465747718b8abcccb3d525fecca48f2b2  ios/Tofeeri/Assets.xcassets/AppIcon.appiconset/icon-1024.png" | shasum -a 256 -c -
 
       - name: Validate JavaScript
         run: |
@@ -80,17 +92,21 @@ jobs:
           cd ios
           xcodebuild -project Tofeeri.xcodeproj -scheme Tofeeri -configuration Release -sdk iphoneos -derivedDataPath build CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" build
 
+      - name: Verify built iPhone app contains exact v14 logo
+        run: |
+          echo "6c436e9595c91f74622ae7f4460531e4db85bb5eb77984d68657e81e1ea79a09  ios/build/Build/Products/Release-iphoneos/Tofeeri.app/WebAssets/wafferli_logo.jpg" | shasum -a 256 -c -
+
       - name: Package unsigned IPA
         run: |
           cd ios
           rm -rf Payload
           mkdir Payload
           cp -R build/Build/Products/Release-iphoneos/Tofeeri.app Payload/
-          zip -qry Wafferli-v15-iOS-Unsigned.ipa Payload
+          zip -qry Wafferli-v15-Redo-iOS-Unsigned.ipa Payload
 
       - name: Upload unsigned IPA
         uses: actions/upload-artifact@v4
         with:
-          name: Wafferli-v15-iOS-Unsigned
-          path: ios/Wafferli-v15-iOS-Unsigned.ipa
+          name: Wafferli-v15-Redo-iOS-Unsigned
+          path: ios/Wafferli-v15-Redo-iOS-Unsigned.ipa
           if-no-files-found: error
