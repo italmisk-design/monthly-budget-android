@@ -1,128 +1,33 @@
-name: Build Wafferli APK
+name: Build Wafferli v13 Signer
 
 on:
-  workflow_dispatch:
   push:
-    branches: [ "main", "master" ]
+    branches: [ "v13-google-sync-build" ]
+  workflow_dispatch:
 
 jobs:
-  build:
+  signer:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Restore official Wafferli logo
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-          import base64
-          s = ''.join((Path('tools/logo_parts') / f'part{i}.txt').read_text(encoding='utf-8').strip() for i in range(1,6))
-          data = base64.b64decode(s)
-          Path('app/src/main/assets/wafferli_logo.jpg').write_bytes(data)
-          Path('app/src/main/res/drawable/wafferli_logo.jpg').write_bytes(data)
-          PY
-
-      - name: Apply monthly confirmation patch
-        run: python tools/patch_monthly_confirm.py
-
-      - name: Apply monthly funding patch
-        run: python tools/patch_monthly_funding.py
-
-      - name: Apply monthly transfer patch
-        run: python tools/patch_monthly_transfer.py
-
-      - name: Improve category manager
-        run: python tools/patch_category_manager.py
-
-      - name: Add transaction filters
-        run: python tools/patch_transaction_filters.py
-
-      - name: Add balance sheet
-        run: python tools/patch_balance_sheet.py
-
-      - name: Add balance sheet transfer details
-        run: python tools/patch_balance_transfers.py
-
-      - name: Apply Wafferli logo
-        run: python tools/patch_logo.py
-
-      - name: Apply Wafferli brand name
-        run: python tools/patch_brand_name.py
-
-      - name: Make General Wallet real
-        run: python tools/patch_real_general_wallet.py
-
-      - name: Apply primary wallet hierarchy
-        run: python tools/patch_primary_wallet_hierarchy.py
-
-      - name: Apply full-screen safe area
-        run: python tools/patch_safe_area.py
-
-      - name: Add Google Drive backup UI
-        run: python tools/patch_google_drive.py
-
-      - name: Validate patched JavaScript
-        shell: bash
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-          import re
-          s = Path('app/src/main/assets/index.html').read_text(encoding='utf-8')
-          m = re.search(r'<script>(.*)</script>', s, re.S)
-          if not m:
-              raise SystemExit('Inline script not found')
-          Path('/tmp/wafferli-app.js').write_text(m.group(1), encoding='utf-8')
-          PY
-          node --check /tmp/wafferli-app.js
-          node --check app/src/main/assets/primary_wallet.js
-
-      - name: Create matching Android source ZIP
-        run: |
-          zip -qr Wafferli-Android-Source.zip . \
-            -x '.git/*' \
-            -x 'ios/*' \
-            -x '.github/workflows/build-ios.yml' \
-            -x 'app/build/*' \
-            -x 'Wafferli-Android.apk' \
-            -x 'Wafferli-Android-Source.zip'
-
-      - name: Upload Android source ZIP
-        uses: actions/upload-artifact@v4
-        with:
-          name: Wafferli-Android-Source
-          path: Wafferli-Android-Source.zip
-          if-no-files-found: error
-
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '17'
-
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Install Android platform
-        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+      - name: Install build tools
+        run: sdkmanager "build-tools;35.0.0"
 
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '8.9'
+      - name: Package apksigner
+        run: |
+          BT="$ANDROID_SDK_ROOT/build-tools/35.0.0"
+          test -f "$BT/apksigner"
+          test -f "$BT/lib/apksigner.jar"
+          mkdir -p Wafferli-ApkSigner/lib
+          cp "$BT/apksigner" Wafferli-ApkSigner/
+          cp "$BT/lib/apksigner.jar" Wafferli-ApkSigner/lib/
+          zip -qr Wafferli-ApkSigner.zip Wafferli-ApkSigner
 
-      - name: Build installable Debug APK
-        env:
-          WAFFERLI_VERSION_CODE: ${{ github.run_number }}
-          WAFFERLI_VERSION_NAME: 1.3.${{ github.run_number }}
-        run: gradle assembleDebug --stacktrace
-
-      - name: Rename APK
-        run: cp app/build/outputs/apk/debug/app-debug.apk Wafferli-Android.apk
-
-      - name: Upload APK
+      - name: Upload apksigner
         uses: actions/upload-artifact@v4
         with:
-          name: Wafferli-Android-APK
-          path: Wafferli-Android.apk
+          name: Wafferli-ApkSigner
+          path: Wafferli-ApkSigner.zip
           if-no-files-found: error
