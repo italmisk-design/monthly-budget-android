@@ -1,0 +1,110 @@
+     }
+ 
++    @Override protected void onPause() {
++        if (pageLoaded) eval("window.wafferliAppBackgrounded&&window.wafferliAppBackgrounded();");
++        super.onPause();
++    }
++
++    @Override protected void onResume() {
++        super.onResume();
++        if (pageLoaded) eval("window.wafferliAppForegrounded&&window.wafferliAppForegrounded();");
++    }
++
+     @Override protected void onSaveInstanceState(Bundle outState) { webView.saveState(outState); super.onSaveInstanceState(outState); }
+ 
+     @Override public void onBackPressed() {
+--- a/app/build.gradle
++++ b/app/build.gradle
+@@ -10,8 +10,8 @@
+         applicationId "com.monthlybudget.app"
+         minSdk 24
+         targetSdk 35
+-        versionCode = (System.getenv("WAFFERLI_VERSION_CODE") ?: "81").toInteger()
+-        versionName = System.getenv("WAFFERLI_VERSION_NAME") ?: "1.3.1"
++        versionCode = (System.getenv("WAFFERLI_VERSION_CODE") ?: "82").toInteger()
++        versionName = System.getenv("WAFFERLI_VERSION_NAME") ?: "1.5.0"
+     }
+ 
+     buildTypes {
+--- a/ios/Tofeeri/ViewController.swift
++++ b/ios/Tofeeri/ViewController.swift
+@@ -51,9 +51,22 @@
+         let root = Bundle.main.url(forResource: "index", withExtension: "html")
+         guard let indexURL = nested ?? root else { showError("تعذر تحميل ملفات وفرلي"); return }
+         webView.loadFileURL(indexURL, allowingReadAccessTo: indexURL.deletingLastPathComponent())
++        NotificationCenter.default.addObserver(self, selector: #selector(appDidEnterBackground), name: UIApplication.didEnterBackgroundNotification, object: nil)
++        NotificationCenter.default.addObserver(self, selector: #selector(appWillEnterForeground), name: UIApplication.willEnterForegroundNotification, object: nil)
+     }
+ 
+-    deinit { webView?.configuration.userContentController.removeScriptMessageHandler(forName: "Wafferli") }
++    deinit {
++        NotificationCenter.default.removeObserver(self)
++        webView?.configuration.userContentController.removeScriptMessageHandler(forName: "Wafferli")
++    }
++
++    @objc private func appDidEnterBackground() {
++        if pageLoaded { eval("window.wafferliAppBackgrounded&&window.wafferliAppBackgrounded();") }
++    }
++
++    @objc private func appWillEnterForeground() {
++        if pageLoaded { eval("window.wafferliAppForegrounded&&window.wafferliAppForegrounded();") }
++    }
+ 
+     override func viewSafeAreaInsetsDidChange() { super.viewSafeAreaInsetsDidChange(); applySafeAreaToWeb() }
+     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) { pageLoaded = true; applySafeAreaToWeb() }
+@@ -229,52 +242,145 @@
+         }
+     }
+ 
+-    private func latestBackupID(token: String, completion: @escaping (Result<String,Error>)->Void) {
++    private func syncFileName(_ content: String) -> String {
++        if let data = content.data(using: .utf8),
++           let o = try? JSONSerialization.jsonObject(with: data) as? [String:Any],
++           (o["format"] as? String) == "wafferli-cloud-v2",
++           let raw = o["deviceId"] as? String {
++            let safe = raw.filter { $0.isLetter || $0.isNumber || $0 == "-" || $0 == "_" }
++            if !safe.isEmpty { return "Wafferli-Sync-\(safe).json" }
++        }
++        return backupName
++    }
++
++    private func latestBackupID(token: String, fileName: String, completion: @escaping (Result<String,Error>)->Void) {
++        var c = URLComponents(string:"https://www.googleapis.com/drive/v3/files")!
++        c.queryItems = [
++            URLQueryItem(name:"spaces",value:"appDataFolder"),
++            URLQueryItem(name:"q",value:"name='\(fileName.replacingOccurrences(of: "'", with: "\\'"))' and trashed=false"),
++            URLQueryItem(name:"fields",value:"files(id,name,modifiedTime)"),
++            URLQueryItem(name:"orderBy",value:"modifiedTime desc"),
++            URLQueryItem(name:"pageSize",value:"1")
++        ]
++        request(c.url!, token: token) { r in
++            switch r {
++            case .failure(let e): completion(.failure(e))
++            case .success(let data):
++                do {
++                    let o = try JSONSerialization.jsonObject(with:data) as? [String:Any]
++                    let files = o?["files"] as? [[String:Any]]
++                    completion(.success(files?.first?["id"] as? String ?? ""))
++                } catch { completion(.failure(error)) }
++            }
++        }
++    }
++
++    private func listSyncFiles(token: String, completion: @escaping (Result<[[String:Any]],Error>)->Void) {
+         var c = URLComponents(string:"https://www.googleapis.com/drive/v3/files")!
+-        c.queryItems = [URLQueryItem(name:"spaces",value:"appDataFolder"),URLQueryItem(name:"q",value:"name='\(backupName)' and trashed=false"),URLQueryItem(name:"fields",value:"files(id,name,modifiedTime)"),URLQueryItem(name:"orderBy",value:"modifiedTime desc"),URLQueryItem(name:"pageSize",value:"1")]
++        c.queryItems = [
++            URLQueryItem(name:"spaces",value:"appDataFolder"),
++            URLQueryItem(name:"q",value:"(name contains 'Wafferli-Sync-' or name='\(backupName)') and trashed=false"),
++            URLQueryItem(name:"fields",value:"files(id,name,modifiedTime)"),
++            URLQueryItem(name:"orderBy",value:"modifiedTime desc"),
++            URLQueryItem(name:"pageSize",value:"100")
++        ]
+         request(c.url!, token: token) { r in
+-            switch r { case .failure(let e): completion(.failure(e)); case .success(let data):
+-                do { let o = try JSONSerialization.jsonObject(with:data) as? [String:Any]; let files = o?["files"] as? [[String:Any]]; completion(.success(files?.first?["id"] as? String ?? "")) } catch { completion(.failure(error)) }
++            switch r {
++            case .failure(let e): completion(.failure(e))
++            case .success(let data):
++                do {
++                    let o = try JSONSerialization.jsonObject(with:data) as? [String:Any]
