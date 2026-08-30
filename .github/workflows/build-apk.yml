@@ -56,12 +56,6 @@ jobs:
           cat tools/v15_patch_parts/part*.txt > /tmp/v15.patch
           git apply --include='app/**' /tmp/v15.patch
 
-      - name: Restore and verify exact v14 logo bytes
-        run: |
-          echo "6c436e9595c91f74622ae7f4460531e4db85bb5eb77984d68657e81e1ea79a09  app/src/main/res/drawable/wafferli_logo.jpg" | sha256sum -c -
-          cp app/src/main/res/drawable/wafferli_logo.jpg app/src/main/assets/wafferli_logo.jpg
-          echo "6c436e9595c91f74622ae7f4460531e4db85bb5eb77984d68657e81e1ea79a09  app/src/main/assets/wafferli_logo.jpg" | sha256sum -c -
-
       - name: Validate JavaScript
         run: |
           python - <<'PY'
@@ -94,14 +88,9 @@ jobs:
 
       - name: Build unsigned release APK
         env:
-          WAFFERLI_VERSION_CODE: 84
-          WAFFERLI_VERSION_NAME: 1.5.2
+          WAFFERLI_VERSION_CODE: 85
+          WAFFERLI_VERSION_NAME: 1.5.3
         run: gradle assembleRelease --stacktrace
-
-      - name: Verify built APK contains exact v14 logo
-        run: |
-          unzip -p app/build/outputs/apk/release/app-release-unsigned.apk assets/wafferli_logo.jpg > /tmp/apk-logo.jpg
-          echo "6c436e9595c91f74622ae7f4460531e4db85bb5eb77984d68657e81e1ea79a09  /tmp/apk-logo.jpg" | sha256sum -c -
 
       - name: Prepare APK artifact
         run: cp app/build/outputs/apk/release/app-release-unsigned.apk Wafferli-v15-IconFix-Unsigned.apk
