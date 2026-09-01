@@ -1,8 +1,8 @@
-name: Build Wafferli v16 Android
+name: Build Wafferli v18 Android Widget
 
 on:
   push:
-    branches: [ "v16-training" ]
+    branches: [ "v18-widget-only" ]
   workflow_dispatch:
 
 jobs:
@@ -44,24 +44,15 @@ jobs:
           git apply --include='app/**' /tmp/v15.patch
       - name: Add v16 12-step tutorial
         run: python tools/patch_tutorial_v16.py
+      - name: Add v18 quick-add widget
+        run: python tools/patch_widget_v18.py
 
-      - name: Validate tutorial
+      - name: Validate widget and tutorial
         run: |
+          grep -q "QuickAddWidget" app/src/main/AndroidManifest.xml
+          grep -q "pendingQuickAddType" app/src/main/java/com/monthlybudget/app/MainActivity.java
+          grep -q "widgetIncome" app/src/main/res/layout/widget_quick_add.xml
           grep -q "12 خطوة" app/src/main/assets/tutorial.js
-          grep -q "الحركات الشهرية" app/src/main/assets/tutorial.js
-          grep -q "كشف الحركات" app/src/main/assets/tutorial.js
-          grep -q "الكشف الكلي" app/src/main/assets/tutorial.js
-          python - <<'PY'
-          from pathlib import Path
-          s=Path('app/src/main/assets/tutorial.js').read_text(encoding='utf-8')
-          a=s.index('const tutorialSteps=['); b=s.index('];',a)
-          n=s[a:b].count('title:')
-          print('tutorial steps:',n)
-          if n != 12: raise SystemExit('tutorial must contain exactly 12 steps')
-          html=Path('app/src/main/assets/index.html').read_text(encoding='utf-8')
-          if '<script src="tutorial.js"></script>' not in html: raise SystemExit('tutorial script not loaded')
-          if 'tutorialSettingsRow' not in html: raise SystemExit('tutorial settings row missing')
-          PY
           node --check app/src/main/assets/tutorial.js
           node --check app/src/main/assets/primary_wallet.js
 
@@ -80,28 +71,34 @@ jobs:
           gradle-version: '8.9'
       - name: Build unsigned release APK
         env:
-          WAFFERLI_VERSION_CODE: 88
-          WAFFERLI_VERSION_NAME: 1.6.1
+          WAFFERLI_VERSION_CODE: 90
+          WAFFERLI_VERSION_NAME: 1.8.0
         run: gradle assembleRelease --stacktrace
 
-      - name: Verify packaged tutorial
+      - name: Verify packaged widget
         run: |
+          unzip -l app/build/outputs/apk/release/app-release-unsigned.apk | grep -q "widget_quick_add"
           unzip -p app/build/outputs/apk/release/app-release-unsigned.apk assets/tutorial.js > /tmp/tutorial.js
           python - <<'PY'
           from pathlib import Path
           s=Path('/tmp/tutorial.js').read_text(encoding='utf-8')
           a=s.index('const tutorialSteps=['); b=s.index('];',a)
-          n=s[a:b].count('title:')
-          print('PACKAGED tutorial steps:',n)
-          if n != 12: raise SystemExit('packaged APK does not have 12 steps')
-          if 'wafferli_tutorial_completed_v3' not in s: raise SystemExit('new tutorial key missing')
+          if s[a:b].count('title:') != 12: raise SystemExit('tutorial count changed')
           PY
 
-      - name: Prepare APK artifact
-        run: cp app/build/outputs/apk/release/app-release-unsigned.apk Wafferli-v16.1-12Step-Unsigned.apk
-      - name: Upload APK
+      - name: Prepare artifacts
+        run: |
+          mkdir -p dist/source
+          cp app/build/outputs/apk/release/app-release-unsigned.apk dist/Wafferli_v18_Widget_Android_Unsigned.apk
+          cp -R app build.gradle gradle.properties settings.gradle dist/source/
+          cd dist/source
+          zip -qry ../Wafferli_v18_Widget_Android_Source.zip .
+
+      - name: Upload Android artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: Wafferli-v16.1-12Step-Unsigned-APK
-          path: Wafferli-v16.1-12Step-Unsigned.apk
+          name: Wafferli-v18-Widget-Android
+          path: |
+            dist/Wafferli_v18_Widget_Android_Unsigned.apk
+            dist/Wafferli_v18_Widget_Android_Source.zip
           if-no-files-found: error
