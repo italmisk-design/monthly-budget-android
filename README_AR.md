@@ -1,11 +1,23 @@
-# برنامج الميزانية الشهرية - Android v2
+# Wafferli v16 Training
 
-التعديل في هذه النسخة:
-- اتجاه RTL كامل.
-- على الشاشات الكبيرة: المدخلات على اليمين، التفاصيل على اليسار.
-- على الشاشات الصغيرة: المدخلات أولاً، ثم التفاصيل والنتائج في الأسفل.
-- تم إلغاء تبويبات الهاتف حتى تكون النتائج آخر شيء في الصفحة.
-- بقية المزايا كما هي: IQD/USD، إضافة وحذف البنود، فواصل أثناء الكتابة، Scroll، حفظ/فتح TXT.
+نسخة مصدر منظفة مبنية مباشرة من السورس بدون patching أثناء الـBuild.
 
-ملف الواجهة الرئيسي:
-app/src/main/assets/index.html
+## هيكل الواجهة
+- `assets/index.html`: HTML فقط
+- `assets/style.css`: التنسيق
+- `assets/app.js`: منطق التطبيق
+- `assets/sync.js`: مزامنة Google
+- `assets/primary_wallet.js`: منطق المحفظة الرئيسية
+- `assets/tutorial.js`: التدريب التفاعلي السريع باللغة العربية الفصحى
+
+## الشعار
+الـBuild لا يغيّر الشعار. يمكن تغييره لاحقاً بشكل مقصود بواسطة `tools/update_logo.py` ثم `tools/verify_project.py`.
+
+## فحص سريع
+```bash
+python tools/verify_project.py
+node --check app/src/main/assets/app.js
+node --check app/src/main/assets/sync.js
+node --check app/src/main/assets/primary_wallet.js
+node --check app/src/main/assets/tutorial.js
+```

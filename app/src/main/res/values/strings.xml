@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">توفيري</string>
+    <string name="app_name">وفرلي</string>
+    <string name="google_oauth_client_id">426484865881-ki2lmbhaklnsgt7ej6ojr9liebaiet4p.apps.googleusercontent.com</string>
+    <string name="widget_description">إضافة إيراد أو مصروف بسرعة</string>
 </resources>

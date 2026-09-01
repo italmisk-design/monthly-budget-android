@@ -1,9 +1,9 @@
-name: Build Tofeeri APK
+name: Build Wafferli v19
 
 on:
   workflow_dispatch:
   push:
-    branches: [ "main", "master" ]
+    branches: [ "main" ]
 
 jobs:
   build:
@@ -12,49 +12,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Apply monthly confirmation patch
-        run: python tools/patch_monthly_confirm.py
+      - name: Verify project
+        run: python tools/verify_project.py
 
-      - name: Apply monthly funding patch
-        run: python tools/patch_monthly_funding.py
-
-      - name: Apply monthly transfer patch
-        run: python tools/patch_monthly_transfer.py
-
-      - name: Improve category manager
-        run: python tools/patch_category_manager.py
-
-      - name: Add transaction filters
-        run: python tools/patch_transaction_filters.py
-
-      - name: Validate patched JavaScript
-        shell: bash
+      - name: Validate JavaScript
         run: |
-          python - <<'PY'
-          from pathlib import Path
-          import re
-          s = Path('app/src/main/assets/index.html').read_text(encoding='utf-8')
-          m = re.search(r'<script>(.*)</script>', s, re.S)
-          if not m:
-              raise SystemExit('Inline script not found')
-          Path('/tmp/tofeeri-app.js').write_text(m.group(1), encoding='utf-8')
-          PY
-          node --check /tmp/tofeeri-app.js
-
-      - name: Create matching source ZIP
-        run: |
-          zip -qr Tofeeri-Source.zip . \
-            -x '.git/*' \
-            -x 'app/build/*' \
-            -x 'Tofeeri.apk' \
-            -x 'Tofeeri-Source.zip'
-
-      - name: Upload source ZIP
-        uses: actions/upload-artifact@v4
-        with:
-          name: Tofeeri-Source
-          path: Tofeeri-Source.zip
-          if-no-files-found: error
+          node --check app/src/main/assets/app.js
+          node --check app/src/main/assets/sync.js
+          node --check app/src/main/assets/primary_wallet.js
+          node --check app/src/main/assets/tutorial.js
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -76,12 +42,21 @@ jobs:
       - name: Build APK
         run: gradle assembleDebug --stacktrace
 
-      - name: Rename APK
-        run: cp app/build/outputs/apk/debug/app-debug.apk Tofeeri.apk
+      - name: Package deliverables
+        run: |
+          cp app/build/outputs/apk/debug/app-debug.apk Wafferli_v19_Minimal_Widget_Android.apk
+          zip -qr Wafferli_v19_Minimal_Widget_Android_Source.zip . \
+            -x '.git/*' \
+            -x '.gradle/*' \
+            -x 'app/build/*' \
+            -x 'Wafferli_v19_Minimal_Widget_Android.apk' \
+            -x 'Wafferli_v19_Minimal_Widget_Android_Source.zip'
 
-      - name: Upload APK
+      - name: Upload APK and source
         uses: actions/upload-artifact@v4
         with:
-          name: Tofeeri-APK
-          path: Tofeeri.apk
+          name: Wafferli-v19-Minimal-Widget
+          path: |
+            Wafferli_v19_Minimal_Widget_Android.apk
+            Wafferli_v19_Minimal_Widget_Android_Source.zip
           if-no-files-found: error
