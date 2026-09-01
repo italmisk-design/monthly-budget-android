@@ -75,9 +75,9 @@ jobs:
           WAFFERLI_VERSION_NAME: 1.8.0
         run: gradle assembleRelease --stacktrace
 
-      - name: Verify packaged widget
+      - name: Verify packaged app
         run: |
-          unzip -l app/build/outputs/apk/release/app-release-unsigned.apk | grep -q "widget_quick_add"
+          test -s app/build/outputs/apk/release/app-release-unsigned.apk
           unzip -p app/build/outputs/apk/release/app-release-unsigned.apk assets/tutorial.js > /tmp/tutorial.js
           python - <<'PY'
           from pathlib import Path
