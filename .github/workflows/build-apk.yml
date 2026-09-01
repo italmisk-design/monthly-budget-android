@@ -39,12 +39,32 @@ jobs:
         with:
           gradle-version: '8.9'
 
-      - name: Build APK
-        run: gradle assembleDebug --stacktrace
+      - name: Prepare permanent signing key
+        env:
+          WAFFERLI_KEYSTORE_B64: ${{ secrets.WAFFERLI_KEYSTORE_B64 }}
+          WAFFERLI_STORE_PASSWORD: ${{ secrets.WAFFERLI_STORE_PASSWORD }}
+          WAFFERLI_KEY_PASSWORD: ${{ secrets.WAFFERLI_KEY_PASSWORD }}
+          WAFFERLI_KEY_ALIAS: ${{ secrets.WAFFERLI_KEY_ALIAS }}
+        run: |
+          test -n "$WAFFERLI_KEYSTORE_B64"
+          test -n "$WAFFERLI_STORE_PASSWORD"
+          test -n "$WAFFERLI_KEY_PASSWORD"
+          test -n "$WAFFERLI_KEY_ALIAS"
+          printf '%s' "$WAFFERLI_KEYSTORE_B64" | base64 --decode > app/wafferli-release.jks
+
+      - name: Build signed APK
+        env:
+          WAFFERLI_KEYSTORE_PATH: wafferli-release.jks
+          WAFFERLI_STORE_PASSWORD: ${{ secrets.WAFFERLI_STORE_PASSWORD }}
+          WAFFERLI_KEY_PASSWORD: ${{ secrets.WAFFERLI_KEY_PASSWORD }}
+          WAFFERLI_KEY_ALIAS: ${{ secrets.WAFFERLI_KEY_ALIAS }}
+          WAFFERLI_VERSION_CODE: 190
+          WAFFERLI_VERSION_NAME: 1.9.0
+        run: gradle assembleRelease --stacktrace
 
       - name: Package deliverables
         run: |
-          cp app/build/outputs/apk/debug/app-debug.apk Wafferli_v19_Minimal_Widget_Android.apk
+          cp app/build/outputs/apk/release/app-release.apk Wafferli_v19_Minimal_Widget_Android.apk
           zip -qr Wafferli_v19_Minimal_Widget_Android_Source.zip . \
             -x '.git/*' \
             -x '.gradle/*' \
